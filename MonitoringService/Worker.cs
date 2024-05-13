@@ -17,7 +17,7 @@ namespace MonitoringService
             _ongoingFolderPath = @"C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development";
             _approvedFolderPath = @"C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development";
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt"; 
-            _previousApprovedFileNamesPath = "previousOngoingFiles.txt";
+            _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
             _previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
             _previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
         }
@@ -51,8 +51,10 @@ namespace MonitoringService
 
                  _logger.LogInformation("Comparing ongoing files...");
                 CompareFolderContents(newOngoingFiles, _previousOngoingFiles, _previousOngoingFileNamesPath);
+               
+                _logger.LogInformation("Comparing approved files...");
+                CompareFolderContents(newApprovedFiles, _previousApprovedFiles, _previousApprovedFileNamesPath);
 
-              
                 await Task.Delay(10000, stoppingToken);
             }
         }
