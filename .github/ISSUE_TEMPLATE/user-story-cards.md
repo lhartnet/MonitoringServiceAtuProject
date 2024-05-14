@@ -7,9 +7,9 @@ assignees: ''
 
 ---
 
-**As a **
-**I want **
-**So that **
+**As a**
+**I want**
+**So that**
 
 **Acceptance Criteria**
 - 
