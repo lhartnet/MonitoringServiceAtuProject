@@ -1,7 +1,2 @@
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\atu github-recovery-codes.txt
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\Contempt software dev overview.png
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\course overview.pdf
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\cpd ca2.png
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\Software Engineering, 10th Edition by Ian Sommerville (z-lib.org).pdf
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\SoftwareDev.url
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development\SWEBOK.pdf
+C:\dev\MonitoringService\OngoingSpecs\Test File 1.pdf
+C:\dev\MonitoringService\OngoingSpecs\Test File 2.pdf

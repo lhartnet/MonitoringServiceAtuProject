@@ -1,4 +1,7 @@
+using iText.Kernel.Pdf.Canvas.Parser;
+using iText.Kernel.Pdf;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace MonitoringService
 {
@@ -57,6 +60,14 @@ namespace MonitoringService
                 _logger.LogInformation("Comparing approved files...");
                 CompareFolderContents(newApprovedFiles, _previousApprovedFiles, _previousApprovedFileNamesPath);
 
+                foreach (var file in newOngoingFiles)
+                {
+                    if (Path.GetExtension(file) == ".pdf")
+                    {
+                        ExtractSpecData(file);
+                    }
+                }
+
                 await Task.Delay(10000, stoppingToken);
             }
         }
@@ -98,6 +109,118 @@ namespace MonitoringService
                 _logger.LogInformation("No new files added since last run.");
 
             }
+        }
+
+        private void ExtractSpecData(string pdfPath)
+        {
+            try
+            {
+                using (PdfReader reader = new PdfReader(pdfPath))
+                using (PdfDocument pdfDoc = new PdfDocument(reader))
+                {
+                    StringBuilder textBuilder = new StringBuilder();
+                    for (int i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
+                    {
+                        textBuilder.Append(PdfTextExtractor.GetTextFromPage(pdfDoc.GetPage(i)));
+                    }
+                    string pdfText = textBuilder.ToString();
+                    var pdfData = ParseSpecData(pdfText);
+                    LogSpecData(pdfData);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error reading PDF file {pdfPath}: {ex.Message}");
+            }
+        }
+
+        private SpecDetails ParseSpecData(string pdfText)
+        {
+            var data = new SpecDetails();
+            var lines = pdfText.Split('\n');
+
+            string currentSection = null;
+            StringBuilder sectionContent = new StringBuilder();
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                switch (trimmedLine)
+                {
+                    case "Title":
+                    case "Author":
+                    case "Revision":
+                    case "Date":
+                    case "Area":
+                    case "Purpose":
+                    case "Description":
+                        if (currentSection != null)
+                        {
+                            SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
+                        }
+                        currentSection = trimmedLine;
+                        sectionContent.Clear();
+                        break;
+
+                    default:
+                        if (currentSection != null)
+                        {
+                            if (sectionContent.Length > 0)
+                            {
+                                sectionContent.Append(" ");
+                            }
+                            sectionContent.Append(trimmedLine);
+                        }
+                        break;
+                }
+            }
+
+            if (currentSection != null)
+            {
+                SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
+            }
+
+            return data;
+        }
+
+        private void SetSpecProperties(SpecDetails data, string property, string value)
+        {
+            switch (property)
+            {
+                case "Title":
+                    data.Title = value;
+                    break;
+                case "Author":
+                    data.Author = value;
+                    break;
+                case "Revision":
+                    data.Revision = value;
+                    break;
+                case "Date":
+                    data.Date = value;
+                    break;
+                case "Area":
+                    data.Area = value;
+                    break;
+                case "Purpose":
+                    data.Purpose = value;
+                    break;
+                case "Description":
+                    data.Description = value;
+                    break;
+            }
+        }
+
+        private void LogSpecData(SpecDetails data)
+        {
+            _logger.LogInformation("PDF Data Extracted:");
+            _logger.LogInformation($"Title: {data.Title}");
+            _logger.LogInformation($"Author: {data.Author}");
+            _logger.LogInformation($"Revision: {data.Revision}");
+            _logger.LogInformation($"Date: {data.Date}");
+            _logger.LogInformation($"Area: {data.Area}");
+            _logger.LogInformation($"Purpose: {data.Purpose}");
+            _logger.LogInformation($"Description: {data.Description}");
         }
     }
 }
