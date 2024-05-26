@@ -1,8 +1,10 @@
 using MonitoringService;
+using Microsoft.Extensions.Configuration;
 
 IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
+    .ConfigureServices((context, services) =>
     {
+        services.Configure<ConfigurableSettings>(context.Configuration.GetSection("FolderPaths"));
         services.AddHostedService<Worker>();
     })
     .Build();
