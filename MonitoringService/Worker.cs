@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace MonitoringService
 {
     public class Worker : BackgroundService
@@ -11,12 +13,12 @@ namespace MonitoringService
         private List<string> _previousOngoingFiles;
         private List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings)
         {
             _logger = logger;
-            _ongoingFolderPath = @"C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development";
-            _approvedFolderPath = @"C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\Contemporary Software Development";
-            _previousOngoingFileNamesPath = "previousOngoingFiles.txt"; 
+            _ongoingFolderPath = folderSettings.Value.Ongoing;
+            _approvedFolderPath = folderSettings.Value.Approved;
+            _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
             _previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
             _previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
@@ -47,11 +49,11 @@ namespace MonitoringService
                 var newOngoingFiles = CheckFolderContents(_ongoingFolderPath);
 
                 _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
-                 var newApprovedFiles = CheckFolderContents(_approvedFolderPath);
+                var newApprovedFiles = CheckFolderContents(_approvedFolderPath);
 
-                 _logger.LogInformation("Comparing ongoing files...");
+                _logger.LogInformation("Comparing ongoing files...");
                 CompareFolderContents(newOngoingFiles, _previousOngoingFiles, _previousOngoingFileNamesPath);
-               
+
                 _logger.LogInformation("Comparing approved files...");
                 CompareFolderContents(newApprovedFiles, _previousApprovedFiles, _previousApprovedFileNamesPath);
 
