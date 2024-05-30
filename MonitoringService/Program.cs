@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MonitoringService;
 using Microsoft.Extensions.Configuration;
 using MonitoringService.Services;
@@ -9,6 +10,8 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.Configure<EmailSettings>(context.Configuration.GetSection("EmailSettings"));
         services.AddSingleton<EmailService>();
         services.AddHostedService<Worker>();
+        services.AddDbContext<ApplicationContext>(options =>
+            options.UseSqlServer(context.Configuration.GetConnectionString("DefaultConnection")));
     })
     .Build();
 
