@@ -10,13 +10,14 @@ namespace MonitoringService
         private readonly ILogger<Worker> _logger;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
+        private readonly EmailService _emailService;
 
         private readonly string _previousOngoingFileNamesPath;
         private readonly string _previousApprovedFileNamesPath;
         private List<string> _previousOngoingFiles;
         private List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, EmailService emailService)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -25,6 +26,7 @@ namespace MonitoringService
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
             _previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
             _previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
+            _emailService = emailService;   
         }
 
         private List<string> LoadPreviousFileNames(string filePath)
@@ -103,6 +105,7 @@ namespace MonitoringService
                     _logger.LogInformation("File added: {file}", Path.GetFileName(newFile));
                 }
                 SavePreviousFileNames(filePath, currentFiles);
+                SendNewFilesEmail(newFiles.ToArray(), filePath);
             }
             else
             {
@@ -222,5 +225,21 @@ namespace MonitoringService
             _logger.LogInformation($"Purpose: {data.Purpose}");
             _logger.LogInformation($"Description: {data.Description}");
         }
+
+        private void SendNewFilesEmail(string[] newFiles, string folder)
+        {
+            var subject = $"ATTN: New files in {folder} folder";
+            var body = new StringBuilder();
+            body.AppendLine("Hi,\nThe following new files were detected and require attention:\n");
+            foreach (var newFile in newFiles)
+            {
+                body.AppendLine(Path.GetFileName(newFile));
+            }
+
+            body.AppendLine("\nThanks");
+            _emailService.SendEmail(subject, body.ToString());
+        }
     }
 }
+
+
