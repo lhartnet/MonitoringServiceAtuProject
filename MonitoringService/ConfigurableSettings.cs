@@ -4,5 +4,6 @@
     {
         public string Ongoing { get; set; }
         public string Approved { get; set; }
+        public int DelayMilliseconds { get; set; }
     }
 }
