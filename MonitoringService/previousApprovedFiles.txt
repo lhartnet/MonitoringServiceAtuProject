@@ -7,4 +7,3 @@ C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_202
 C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240305_.xlsx
 C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240528.xlsx
 C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_2024115.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_202435.csv
