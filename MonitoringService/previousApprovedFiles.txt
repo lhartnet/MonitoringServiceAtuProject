@@ -1,9 +1,0 @@
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20231012.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_2023821.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_202388.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240111.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240111_.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240227.csv
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240305_.xlsx
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_20240528.xlsx
-C:\Users\lhartnet\OneDrive - Analog Devices, Inc\Documents\specsToStar\bvlib_2024115.csv
