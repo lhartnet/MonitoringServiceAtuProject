@@ -3,6 +3,7 @@ using iText.Kernel.Pdf;
 using Microsoft.Extensions.Options;
 using System.Text;
 using MonitoringService.Services;
+using System.Collections.Generic;
 
 namespace MonitoringService
 {
@@ -12,25 +13,29 @@ namespace MonitoringService
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly EmailService _emailService;
-        private readonly int _delayBetweenRuns; 
+        private readonly int _delayBetweenRuns;
+        //private readonly ApplicationContext _dbContext;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
         private readonly string _previousOngoingFileNamesPath;
         private readonly string _previousApprovedFileNamesPath;
-        private List<string> _previousOngoingFiles;
-        private List<string> _previousApprovedFiles;
+        private readonly List<string> _previousOngoingFiles;
+        private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, EmailService emailService)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
             _approvedFolderPath = folderSettings.Value.Approved;
-            _delayBetweenRuns = folderSettings.Value.DelayMilliseconds;
+            _delayBetweenRuns = folderSettings.Value.MsBetweenRuns;
+            _serviceScopeFactory = serviceScopeFactory;
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
             _previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
             _previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
+            //_dbContext = context;   
         }
 
         private List<string> LoadPreviousFileNames(string filePath)
@@ -48,56 +53,65 @@ namespace MonitoringService
         }
 
 
+
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-
-                _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
-                var ongoingFiles = CheckFolderContents(_ongoingFolderPath);
-
-                _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
-                var approvedFiles = CheckFolderContents(_approvedFolderPath);
-
-                _logger.LogInformation("Comparing ongoing files...");
-                string[] newOngoingFiles = CompareFolderContents(ongoingFiles, _previousOngoingFiles, _previousOngoingFileNamesPath);
-
-                _logger.LogInformation("Comparing approved files...");
-                string[] newApprovedFiles = CompareFolderContents(approvedFiles, _previousApprovedFiles, _previousApprovedFileNamesPath);
-
-                List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
-                List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
-
-                if (newOngoingFiles.Length > 0)
+                using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    foreach (var file in newOngoingFiles)
-                    {
-                        if (Path.GetExtension(file) == ".pdf")
-                        {
-                            var fileData = ExtractSpecData(file);
 
-                            listOngoingFiles.Add(fileData);
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
+
+                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+
+                    _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
+                    var ongoingFiles = CheckFolderContents(_ongoingFolderPath);
+
+                    _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
+                    var approvedFiles = CheckFolderContents(_approvedFolderPath);
+
+                    _logger.LogInformation("Comparing ongoing files...");
+                    string[] newOngoingFiles = CompareFolderContents(ongoingFiles, _previousOngoingFiles, _previousOngoingFileNamesPath);
+
+                    _logger.LogInformation("Comparing approved files...");
+                    string[] newApprovedFiles = CompareFolderContents(approvedFiles, _previousApprovedFiles, _previousApprovedFileNamesPath);
+
+                    List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
+                    List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
+
+                    if (newOngoingFiles.Length > 0)
+                    {
+                        foreach (var file in newOngoingFiles)
+                        {
+                            if (Path.GetExtension(file) == ".pdf")
+                            {
+                                var fileData = ExtractSpecData(file);
+
+                                listOngoingFiles.Add(fileData);
+                            }
                         }
+
+                        SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
+                        SaveToDatabase(listOngoingFiles);
                     }
 
-                    SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
-                }
-
-                if (newApprovedFiles.Length > 0)
-                {
-                    foreach (var file in newApprovedFiles)
+                    if (newApprovedFiles.Length > 0)
                     {
-                        if (Path.GetExtension(file) == ".pdf")
+                        foreach (var file in newApprovedFiles)
                         {
-                            var fileData = ExtractSpecData(file);
-                            listApprovedFiles.Add(fileData);
+                            if (Path.GetExtension(file) == ".pdf")
+                            {
+                                var fileData = ExtractSpecData(file);
+                                listApprovedFiles.Add(fileData);
+                            }
                         }
+
+                        SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
+                        SaveToDatabase(listApprovedFiles);
                     }
-
-                    SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
                 }
-
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
         }
@@ -282,6 +296,19 @@ namespace MonitoringService
 
             body.AppendLine("\nThanks");
             _emailService.SendEmail(subject, body.ToString());
+        }
+
+        private void SaveToDatabase(List<SpecDetails> details)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
+
+            foreach (var document in details)
+            {
+                dbContext.SpecDetail.Add(document);
+            }
+
+            dbContext.SaveChanges();
         }
     }
 }

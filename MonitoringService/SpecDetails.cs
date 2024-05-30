@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace MonitoringService
 {
     public class SpecDetails
     {
+        public int Id { get; set; }
         public string Title { get; set; }
         public string Author { get; set; }
         public string Revision { get; set; }
