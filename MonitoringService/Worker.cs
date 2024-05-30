@@ -12,6 +12,7 @@ namespace MonitoringService
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly EmailService _emailService;
+        private readonly int _delayBetweenRuns; 
 
         private readonly string _previousOngoingFileNamesPath;
         private readonly string _previousApprovedFileNamesPath;
@@ -23,6 +24,8 @@ namespace MonitoringService
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
             _approvedFolderPath = folderSettings.Value.Approved;
+            _delayBetweenRuns = folderSettings.Value.DelayMilliseconds;
+
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
             _previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
@@ -95,7 +98,7 @@ namespace MonitoringService
                     SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
                 }
 
-                await Task.Delay(10000, stoppingToken);
+                await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
         }
 
