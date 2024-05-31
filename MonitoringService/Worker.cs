@@ -17,6 +17,7 @@ namespace MonitoringService
         private readonly ILogger<Worker> _logger;
         private readonly FileDirectorySetup _fileDirectorySetup;
         private readonly NewFileManagment _newFileManagment;
+        private readonly ParsePdfs _parsePdfs;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly string _approvedCsvPath;
@@ -30,7 +31,7 @@ namespace MonitoringService
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, ParsePdfs parsePdfs, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -40,6 +41,7 @@ namespace MonitoringService
             _serviceScopeFactory = serviceScopeFactory;
             _fileDirectorySetup = fileDirectorySetup;
             _newFileManagment = newFileManagment;
+            _parsePdfs = parsePdfs;
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
@@ -141,7 +143,7 @@ namespace MonitoringService
                         {
                             if (Path.GetExtension(file) == ".pdf")
                             {
-                                var fileData = ExtractSpecData(file, "Ongoing");
+                                var fileData = _parsePdfs.ExtractSpecData(file, "Ongoing");
                                 bool noEmptyFields = AllSpecFieldsEntered(fileData);
                                 if (noEmptyFields)
                                 {
@@ -185,7 +187,7 @@ namespace MonitoringService
                         {
                             if (Path.GetExtension(file) == ".pdf")
                             {
-                                var fileData = ExtractSpecData(file, "Approved");
+                                var fileData = _parsePdfs.ExtractSpecData(file, "Approved");
                                 bool noEmptyFields = AllSpecFieldsEntered(fileData);
                                 if (noEmptyFields)
                                 {
@@ -232,85 +234,7 @@ namespace MonitoringService
         
 
 
-        private SpecDetails ExtractSpecData(string pdfPath, string folder)
-        {
-            try
-            {
-                var fileName = Path.GetFileName(pdfPath);
-                using (PdfReader reader = new PdfReader(pdfPath))
-                using (PdfDocument pdfDoc = new PdfDocument(reader))
-                {
-                    StringBuilder textBuilder = new StringBuilder();
-                    for (int i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
-                    {
-                        textBuilder.Append(PdfTextExtractor.GetTextFromPage(pdfDoc.GetPage(i)));
-                    }
-                    string pdfText = textBuilder.ToString();
-                    var pdfData = ParseSpecData(pdfText, fileName, folder);
-                    LogSpecData(pdfData);
-                    return pdfData;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error reading PDF file {pdfPath}: {ex.Message}");
-                var issue = $"There was an issue extracting data from {pdfPath}. The exception message is as follows:\n{ex.Message} Please review.";
-                _emailService.SendAdminErrorMail(Path.GetFileName(pdfPath), issue, folder );
-                return null;
-            }
-        }
-
-        private SpecDetails ParseSpecData(string pdfText, string fileName, string folder)
-        {
-            var data = new SpecDetails();
-            var lines = pdfText.Split('\n');
-
-            string currentSection = null;
-            StringBuilder sectionContent = new StringBuilder();
-
-            foreach (var line in lines)
-            {
-                var trimmedLine = line.Trim();
-                switch (trimmedLine)
-                {
-                    case "Title":
-                    case "Author":
-                    case "Revision":
-                    case "Date":
-                    case "Area":
-                    case "Purpose":
-                    case "Description":
-                        if (currentSection != null)
-                        {
-                            SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
-                        }
-                        currentSection = trimmedLine;
-                        sectionContent.Clear();
-                        break;
-
-                    default:
-                        if (currentSection != null)
-                        {
-                            if (sectionContent.Length > 0)
-                            {
-                                sectionContent.Append(" ");
-                            }
-                            sectionContent.Append(trimmedLine);
-                        }
-                        break;
-                }
-            }
-
-            if (currentSection != null)
-            {
-                SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
-            }
-
-            SetSpecProperties(data, "FileName", fileName);
-            SetSpecProperties(data, "Folder", folder);
-
-            return data;
-        }
+        
 
         private void SetSpecProperties(SpecDetails data, string property, string value)
         {
@@ -347,19 +271,7 @@ namespace MonitoringService
             }
         }
 
-        private void LogSpecData(SpecDetails data)
-        {
-            _logger.LogInformation("PDF Data Extracted:");
-            _logger.LogInformation($"Title: {data.Title}");
-            _logger.LogInformation($"Author: {data.Author}");
-            _logger.LogInformation($"Revision: {data.Revision}");
-            _logger.LogInformation($"Date: {data.Date}");
-            _logger.LogInformation($"Area: {data.Area}");
-            _logger.LogInformation($"Purpose: {data.Purpose}");
-            _logger.LogInformation($"Description: {data.Description}");
-            _logger.LogInformation($"File Name: {data.FileName}");
-            _logger.LogInformation($"Folder: {data.Folder}");
-        }
+       
 
         
 
