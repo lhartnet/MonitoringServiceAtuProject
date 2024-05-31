@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using iText.Layout.Borders;
+using Microsoft.Extensions.DependencyInjection;
 using MonitoringService.Domain.Models;
 using MonitoringService.Services;
 using System;
@@ -9,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace MonitoringService.Persistence
 {
+    /// <summary>
+    /// A class which holds the logic involved with interacting with our SpecDetails database table
+    /// </summary>
     public class SpecDbOperations
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
@@ -24,42 +28,39 @@ namespace MonitoringService.Persistence
             _logger = logging;
         }
 
+        /// <summary>
+        /// Retrieves a list of the file names from the database.
+        /// </summary>
+        /// <param name="Folder">The folder used to filter the database entries based on the "Ongoing" or "Approved" value.</param>
+        /// <returns>A list of file names filtered by the specified folder.</returns>
         public List<string> GetFileNamesFromDatabase(string Folder)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
+            _logger.LogInformation($"Retrieving list of {Folder} file names from the database...\n");
             return dbContext.SpecDetails.Where(s => s.Folder == Folder).Select(s => s.FileName).ToList();
         }
 
+        /// <summary>
+        /// Retrieves a list of the file objects from the database filtered by "ongoing" or "approved".
+        /// </summary>
+        /// <param name="Folder">The folder used to filter the database entries based on the "Ongoing" or "Approved" value.</param>
+        /// <returns>A list of file names filtered by the specified folder.</returns>
         public List<SpecDetails> GetDatabaseEntries(string folder)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
-            List<SpecDetails> entries = new List<SpecDetails>();
 
-            if (folder == "Ongoing")
-            {
-                entries = dbContext.SpecDetails.Where(s => s.Folder == "Ongoing").ToList();
-            }
-            else if (folder == "Approved")
-            {
-                entries = dbContext.SpecDetails.Where(s => s.Folder == "Approved").ToList();
-            }
+            _logger.LogInformation($"Retrieving list of {folder} files from the database...\n");
+            List<SpecDetails> entries = dbContext.SpecDetails.Where(s => s.Folder == folder).ToList();
 
-            List<SpecDetails> existingSpecs = new List<SpecDetails>();
-
-            Console.WriteLine("Database Entries:");
-            foreach (var entry in entries)
-            {
-                Console.WriteLine($"ID: {entry.Id}, Title: {entry.Title}, Author: {entry.Author}");
-                existingSpecs.Add(entry);
-            }
-
-            return existingSpecs;
+            return entries;
         }
 
-
+        /// <summary>
+        /// Saves the SpecDetails objects to the database. Skips entries with missing information and admin is emailed.
+        /// </summary>
         public void SaveToDatabase(List<SpecDetails> details)
         {
             using var scope = _serviceScopeFactory.CreateScope();
@@ -70,6 +71,7 @@ namespace MonitoringService.Persistence
                 if (_specDetailsManagement.AllSpecFieldsEntered(specRowDocument))
                 {
                     dbContext.SpecDetails.Add(specRowDocument);
+                    _logger.LogInformation($"Added {specRowDocument.FileName} to the database...\n");
                 }
                 else
                 {
@@ -79,6 +81,7 @@ namespace MonitoringService.Persistence
                 }
             }
 
+            _logger.LogInformation("Saving to database in progress.....\n");
             dbContext.SaveChanges();
         }
 

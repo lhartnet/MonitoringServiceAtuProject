@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MonitoringService.Domain.Models
 {
+    /// <summary>
+    /// This class holds the information about a spec retrieved from the pdfs and stored in the database.
+    /// </summary>
     public class SpecDetails
     {
         public int Id { get; set; }

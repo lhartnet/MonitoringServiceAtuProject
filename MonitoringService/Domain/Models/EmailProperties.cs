@@ -8,6 +8,9 @@ namespace MonitoringService.Domain.Models
 {
     public class EmailProperties
     {
+        /// <summary>
+        /// This class represents the appsettings.json Email settings allowing them to be configurable from that file.
+        /// </summary>
         public class EmailSettings
         {
             public string SmtpServer { get; set; }

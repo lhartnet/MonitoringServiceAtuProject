@@ -24,7 +24,7 @@ namespace MonitoringService
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement , SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -44,7 +44,7 @@ namespace MonitoringService
             _fileDirectorySetup.EnsureDirectoriesExist(_ongoingFolderPath, _approvedFolderPath, _approvedCsvPath);
         }
 
-        
+
 
         private List<string> LoadPreviousFileNames(string filePath)
         {
@@ -60,7 +60,7 @@ namespace MonitoringService
             File.WriteAllLines(filePath, files);
         }
 
-       
+
 
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -76,15 +76,19 @@ namespace MonitoringService
 
                     _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
                     var ongoingFiles = _newFileManagment.CheckFolderContents(_ongoingFolderPath);
-
-                    _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
-                    var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
+                    _logger.LogInformation("Found " + ongoingFiles.Length + "file in ongoing folder\n");
 
                     _logger.LogInformation("Comparing ongoing files...");
                     string[] newOngoingFiles = _newFileManagment.CompareFolderContents(ongoingFiles, _previousOngoingFiles);
+                    _logger.LogInformation(newOngoingFiles.Length + " new file(s) found in ongoing folder\n");
+
+                    _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
+                    var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
+                    _logger.LogInformation("Found " + approvedFiles.Length + " file(s) in approved folder\n");
 
                     _logger.LogInformation("Comparing approved files...");
                     string[] newApprovedFiles = _newFileManagment.CompareFolderContents(approvedFiles, _previousApprovedFiles);
+                    _logger.LogInformation(newApprovedFiles.Length + " new file(s) found in approved folder\n");
 
                     List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
@@ -114,12 +118,14 @@ namespace MonitoringService
 
                         if (listOngoingFiles.Count > 0)
                         {
+                            _logger.LogInformation($"{listOngoingFiles.Count} new ongoing files. Preparing to notify and save to database.\n");
                             _emailService.SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
                             _specDbOperations.SaveToDatabase(listOngoingFiles);
                         }
 
                         if (emptyListOngoingFiles.Count > 0)
                         {
+                            _logger.LogWarning($"{emptyListOngoingFiles} new files in ongoing folder have missing data. Please review.\n");
                             List<string> fileNames = new List<string>();
                             foreach (SpecDetails spec in emptyListOngoingFiles)
                             {
@@ -158,13 +164,15 @@ namespace MonitoringService
 
                         if (listApprovedFiles.Count > 0)
                         {
-                            _emailService.SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Ongoing");
+                            _logger.LogInformation($"{listApprovedFiles.Count} new approved files. Preparing to notify and save to database.\n");
+                            _emailService.SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
                             _specDbOperations.SaveToDatabase(listApprovedFiles);
                             _csvFileManagement.CreateAndSaveCsvFile(listApprovedFiles);
                         }
 
                         if (emptyListApprovedFiles.Count > 0)
                         {
+                            _logger.LogWarning($"{emptyListApprovedFiles} new files in approved folder have missing data. Please review.\n");
                             List<string> fileNames = new List<string>();
                             foreach (SpecDetails spec in emptyListApprovedFiles)
                             {
@@ -186,8 +194,8 @@ namespace MonitoringService
             }
         }
 
-        
-        
+
+
     }
 }
 
