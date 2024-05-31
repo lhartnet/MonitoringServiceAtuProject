@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MonitoringService.Domain.Models;
 
-namespace MonitoringService.Emails
+namespace MonitoringService.Services
 {
     public class EmailService
     {
