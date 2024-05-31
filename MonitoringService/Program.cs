@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MonitoringService;
+using MonitoringService.Domain.Models;
+using MonitoringService.Persistence;
 using MonitoringService.Services;
 
 IHost host = Host.CreateDefaultBuilder(args)
@@ -10,8 +12,15 @@ IHost host = Host.CreateDefaultBuilder(args)
             options.UseSqlServer(connectionString));
 
         services.Configure<ConfigurableSettings>(context.Configuration.GetSection("Options"));
-        services.Configure<EmailSettings>(context.Configuration.GetSection("EmailSettings"));
+        services.Configure<EmailProperties.EmailSettings>(context.Configuration.GetSection("EmailSettings"));
         services.AddSingleton<EmailService>();
+        services.AddSingleton<FileDirectorySetup>();
+        services.AddSingleton<CsvFileManagement>();
+        services.AddSingleton<Logging>();
+        services.AddSingleton<NewFileManagment>();
+        services.AddSingleton<ParsePdfs>();
+        services.AddSingleton<SpecDetailsManagement>();
+        services.AddSingleton<SpecDbOperations>();
         services.AddHostedService<Worker>();
     })
     .Build();

@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-
-namespace MonitoringService
+﻿namespace MonitoringService.Domain.Models
 {
+    /// <summary>
+    /// This class holds the information about a spec retrieved from the pdfs and stored in the database.
+    /// </summary>
     public class SpecDetails
     {
         public int Id { get; set; }

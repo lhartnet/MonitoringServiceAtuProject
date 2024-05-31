@@ -4,15 +4,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using MonitoringService;
+using MonitoringService.Persistence;
 
 #nullable disable
 
 namespace MonitoringService.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    [Migration("20240531002244_AddFolderColumn")]
-    partial class AddFolderColumn
+    [Migration("20240530231107_CreateDatabases")]
+    partial class CreateDatabases
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -49,10 +49,6 @@ namespace MonitoringService.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Folder")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
