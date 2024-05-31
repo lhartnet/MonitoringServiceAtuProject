@@ -41,7 +41,25 @@ namespace MonitoringService
             _previousApprovedFiles = GetFileNamesFromDatabase("Approved");
             //_previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
-            //_dbContext = context;   
+            //_dbContext = context;
+           
+            EnsureDirectoriesExist();
+        }
+
+        private void EnsureDirectoriesExist()
+        {
+            CreateDirectoryIfNotExists(_ongoingFolderPath);
+            CreateDirectoryIfNotExists(_approvedFolderPath);
+            CreateDirectoryIfNotExists(_approvedCsvPath);
+        }
+
+        private void CreateDirectoryIfNotExists(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+                _logger.LogInformation($"Created directory at: {path}");
+            }
         }
 
         private List<string> LoadPreviousFileNames(string filePath)
