@@ -22,10 +22,12 @@ namespace MonitoringService.Services
     public class EmailService
     {
         private readonly EmailSettings _emailSettings;
+        private readonly ILogger<Worker> _logger;
 
-        public EmailService(IOptions<EmailSettings> emailSettings)
+        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<Worker> logger)
         {
             _emailSettings = emailSettings.Value;
+            _logger = logger;
         }
 
         public void SendEmail(string subject, string body)
@@ -59,7 +61,10 @@ namespace MonitoringService.Services
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Error sending email: {ex.Message}", ex);
+                _logger.LogError($"Error sending mail: {ex.Message}");
+                var errorSubject = "Attn: Error sending mail for Spec Monitoring Service";
+                var errorBody = $"Hi,\nThis is a notification to inform you that a mail with the following details failed to send by the monitoring service.\n\nSubject: {subject}\n\nBody: {body}\\n\\nHere is the error message: {{ex.Message}}\nThanks";
+                SendEmail(errorSubject, errorBody, "admin");
             }
         }
 
@@ -94,7 +99,10 @@ namespace MonitoringService.Services
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Error sending email: {ex.Message}", ex);
+                _logger.LogError($"Error sending mail: {ex.Message}");
+                var errorSubject = "Attn: Error sending mail for Spec Monitoring Service";
+                var errorBody = $"Hi,\nThis is a notification to inform you that a mail with the following details failed to send by the monitoring service.\n\nSubject: {subject}\n\nBody: {body}\n\nHere is the error message: {ex.Message}\nThanks";
+                SendEmail(errorSubject, errorBody, "admin");
             }
         }
     }
