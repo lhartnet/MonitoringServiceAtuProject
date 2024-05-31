@@ -6,6 +6,7 @@ using MonitoringService.Services;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using iText.Layout.Borders;
 
 namespace MonitoringService
 {
@@ -42,7 +43,7 @@ namespace MonitoringService
             //_previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
             //_dbContext = context;
-           
+
             EnsureDirectoriesExist();
         }
 
@@ -93,9 +94,10 @@ namespace MonitoringService
             if (folder == "Ongoing")
             {
                 entries = dbContext.SpecDetails.Where(s => s.Folder == "Ongoing").ToList();
-            } else if (folder == "Approved")
+            }
+            else if (folder == "Approved")
             {
-               entries = dbContext.SpecDetails.Where(s => s.Folder == "Approved").ToList();
+                entries = dbContext.SpecDetails.Where(s => s.Folder == "Approved").ToList();
             }
 
             List<SpecDetails> existingSpecs = new List<SpecDetails>();
@@ -125,7 +127,7 @@ namespace MonitoringService
                     _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
                     var ongoingFiles = CheckFolderContents(_ongoingFolderPath);
 
-                    
+
                     _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
                     var approvedFiles = CheckFolderContents(_approvedFolderPath);
 
@@ -139,6 +141,9 @@ namespace MonitoringService
                     List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
 
+                    List<SpecDetails> emptyListOngoingFiles = new List<SpecDetails>();
+                    List<SpecDetails> emptyListApprovedFiles = new List<SpecDetails>();
+
                     if (newOngoingFiles.Length > 0)
                     {
                         foreach (var file in newOngoingFiles)
@@ -146,13 +151,41 @@ namespace MonitoringService
                             if (Path.GetExtension(file) == ".pdf")
                             {
                                 var fileData = ExtractSpecData(file, "Ongoing");
+                                bool noEmptyFields = AllSpecFieldsEntered(fileData);
+                                if (noEmptyFields)
+                                {
+                                    listOngoingFiles.Add(fileData);
+                                }
+                                else
+                                {
+                                    emptyListOngoingFiles.Add(fileData);
+                                }
 
-                                listOngoingFiles.Add(fileData);
                             }
                         }
 
-                        SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
-                        SaveToDatabase(listOngoingFiles);
+                        if (listOngoingFiles.Count > 0)
+                        {
+                            SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
+                            SaveToDatabase(listOngoingFiles);
+                        }
+
+                        if (emptyListOngoingFiles.Count > 0)
+                        {
+                            List<string> fileNames = new List<string>();
+                            foreach (SpecDetails spec in emptyListOngoingFiles)
+                            {
+                                fileNames.Add(spec.FileName);
+                            }
+
+                            var fileNameString = string.Join(",", fileNames);
+
+                            var issue =
+                                $"Please review the following specs in the ongoing folder:\n{fileNameString}\n\nSome data is missing.";
+
+                            SendAdminErrorMail(fileNameString, issue, "Ongoing");
+                        }
+
                     }
 
                     if (newApprovedFiles.Length > 0)
@@ -162,14 +195,61 @@ namespace MonitoringService
                             if (Path.GetExtension(file) == ".pdf")
                             {
                                 var fileData = ExtractSpecData(file, "Approved");
-                                listApprovedFiles.Add(fileData);
+                                bool noEmptyFields = AllSpecFieldsEntered(fileData);
+                                if (noEmptyFields)
+                                {
+                                    listApprovedFiles.Add(fileData);
+                                }
+                                else
+                                {
+                                    emptyListApprovedFiles.Add(fileData);
+                                }
+
                             }
                         }
 
-                        SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
-                        SaveToDatabase(listApprovedFiles);
-                        CreateAndSaveCsvFile(listApprovedFiles);
+                        if (listApprovedFiles.Count > 0)
+                        {
+                            SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Ongoing");
+                            SaveToDatabase(listApprovedFiles);
+                            CreateAndSaveCsvFile(listApprovedFiles);
+                        }
+
+                        if (emptyListApprovedFiles.Count > 0)
+                        {
+                            List<string> fileNames = new List<string>();
+                            foreach (SpecDetails spec in emptyListApprovedFiles)
+                            {
+                                fileNames.Add(spec.FileName);
+                            }
+
+                            var fileNameString = string.Join(",", fileNames);
+
+                            var issue =
+                                $"Please review the following specs in the approved folder:\n{fileNameString}\n\nSome data is missing.";
+
+                            SendAdminErrorMail(fileNameString, issue, "Approved");
+                        }
+
                     }
+
+
+
+                    //if (newApprovedFiles.Length > 0)
+                    //{
+                    //    foreach (var file in newApprovedFiles)
+                    //    {
+                    //        if (Path.GetExtension(file) == ".pdf")
+                    //        {
+                    //            var fileData = ExtractSpecData(file, "Approved");
+                    //            listApprovedFiles.Add(fileData);
+                    //        }
+                    //    }
+
+                    //    SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
+                    //    SaveToDatabase(listApprovedFiles);
+
+                    //}
                 }
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
@@ -204,31 +284,6 @@ namespace MonitoringService
         private string[] CompareFolderContents(string[] currentFiles, List<string> existingFiles)
         {
 
-            //List<string> fileNames = new List<string>();
-
-            //foreach (string file in currentFiles)
-            //{
-            //    fileNames.Add(Path.GetFileName(file));
-            //}
-
-
-
-            //var newFiles = fileNames.Except(existingFiles).ToArray();
-            //if (newFiles.Any())
-            //{
-            //    _logger.LogInformation("New files added since last run:");
-            //    foreach (string newFile in newFiles)
-            //    {
-            //        _logger.LogInformation("File added: {file}", Path.GetFileName(newFile));
-            //    }
-            //    //SavePreviousFileNames(filePath, currentFiles);
-            //    return newFiles;
-            //}
-            //else
-            //{
-            //    _logger.LogInformation("No new files added since last run.");
-            //    return new string[0];
-            //}
 
             List<string> newFiles = new List<string>();
 
@@ -248,7 +303,6 @@ namespace MonitoringService
                 {
                     _logger.LogInformation("File added: {file}", newFile);
                 }
-                //SavePreviousFileNames(filePath, currentFiles);
                 return newFiles.ToArray();
             }
             else
@@ -407,18 +461,66 @@ namespace MonitoringService
             _emailService.SendEmail(subject, body.ToString());
         }
 
+        //private void SaveToDatabase(List<SpecDetails> details)
+        //{
+        //    using var scope = _serviceScopeFactory.CreateScope();
+        //    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
+
+        //    foreach (var document in details)
+        //    {
+        //        dbContext.SpecDetails.Add(document);
+        //    }
+
+        //    dbContext.SaveChanges();
+        //}
+
+
         private void SaveToDatabase(List<SpecDetails> details)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
-            foreach (var document in details)
+            foreach (var specRowDocument in details)
             {
-                dbContext.SpecDetails.Add(document);
+                if (AllSpecFieldsEntered(specRowDocument))
+                {
+                    dbContext.SpecDetails.Add(specRowDocument);
+                }
+                else
+                {
+                    _logger.LogWarning($"Skipping document {specRowDocument.FileName} due to missing information.");
+                    var issue = $"There was an issue retrieving some information from spec {specRowDocument.FileName} in the {specRowDocument.Folder} folder. Please review to ensure spec is formatted correctly and fully complete and update the file.\n";
+                    SendAdminErrorMail(specRowDocument.FileName, issue, specRowDocument.Folder);
+                }
             }
-            
+
             dbContext.SaveChanges();
         }
+
+        private bool AllSpecFieldsEntered(SpecDetails spec)
+        {
+            return !string.IsNullOrEmpty(spec.Title)
+                   && !string.IsNullOrEmpty(spec.Author)
+                   && !string.IsNullOrEmpty(spec.Revision)
+                   && !string.IsNullOrEmpty(spec.Date)
+                   && !string.IsNullOrEmpty(spec.Area)
+                   && !string.IsNullOrEmpty(spec.Purpose)
+                   && !string.IsNullOrEmpty(spec.Description)
+                   && !string.IsNullOrEmpty(spec.FileName)
+                   && !string.IsNullOrEmpty(spec.Folder);
+        }
+
+        private void SendAdminErrorMail(string fileName, string issue, string folder)
+        {
+            var subject = $"ATTN: Error with {folder} spec";
+            var body = new StringBuilder();
+            body.AppendLine("Hi,\nThere was an issue with the spec monitoring service.\n");
+            body.AppendLine(issue);
+
+            body.AppendLine("\nThanks");
+            _emailService.SendEmail(subject, body.ToString(), "admin");
+        }
+
 
         private void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)
         {

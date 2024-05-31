@@ -16,6 +16,7 @@ namespace MonitoringService.Services
         public string SenderEmail { get; set; }
         public string SenderPassword { get; set; }
         public string RecipientEmail { get; set; }
+        public string AdminEmail { get; set; }
     }
 
     public class EmailService
@@ -55,6 +56,41 @@ namespace MonitoringService.Services
                 }
 
                 
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error sending email: {ex.Message}", ex);
+            }
+        }
+
+        public void SendEmail(string subject, string body, string admin)
+        {
+            try
+            {
+                var smtpClient = new SmtpClient(_emailSettings.SmtpServer)
+                {
+                    Port = _emailSettings.SmtpPort,
+                    Credentials = new NetworkCredential(_emailSettings.SenderEmail, _emailSettings.SenderPassword),
+                    EnableSsl = true,
+                };
+
+                var mailMessage = new MailMessage
+                {
+                    From = new MailAddress(_emailSettings.SenderEmail),
+                    Subject = subject,
+                    Body = body,
+                    IsBodyHtml = false,
+                };
+
+                string[] emailAddresses = _emailSettings.AdminEmail.Split(',');
+                foreach (string emailAddress in emailAddresses)
+                {
+                    mailMessage.To.Add(emailAddress);
+
+                    smtpClient.Send(mailMessage);
+                }
+
+
             }
             catch (Exception ex)
             {
