@@ -13,7 +13,6 @@ namespace MonitoringService
         {
         }
 
-        public DbSet<SpecDetails> SpecDetail { get; set; }
-
+        public DbSet<SpecDetails> SpecDetails { get; set; }
     }
 }
