@@ -1,18 +1,17 @@
 ﻿using Microsoft.Extensions.Options;
 using MonitoringService.Domain.Models;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MonitoringService.Services
 {
+    /// <summary>
+    /// Class to hold logic for managing the csv file for new approved files.
+    /// </summary>
     public class CsvFileManagement
     {
         private readonly Logging _logger;
-        private string _approvedCsvPath;
+        private readonly string _approvedCsvPath;
 
         public CsvFileManagement(Logging logging, IOptions<ConfigurableSettings> folderSettings)
         {
@@ -20,6 +19,11 @@ namespace MonitoringService.Services
             _approvedCsvPath = folderSettings.Value.ApprovedCsv;
         }
 
+        /// <summary>
+        /// Creates a csv file populated with spec information and saved to location set in appsettings.json
+        /// This file is consumed by another windows service and must follow a strict naming convention.
+        /// "bvlib_" followed by the date in format yyyymd so no preceding 0s are present in filename
+        /// </summary>
         public void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)
         {
             string todayDate = DateTime.Now.ToString("yyyyMd", CultureInfo.InvariantCulture);

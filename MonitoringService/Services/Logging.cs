@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace MonitoringService.Services
 {
+    /// <summary>
+    /// Class to manage logging, specifically where longer sections of logs are required
+    /// </summary>
     public class Logging
     {
         private readonly ILogger<Logging> _logger;
@@ -31,6 +34,10 @@ namespace MonitoringService.Services
             _logger.LogError(message);
         }
 
+        /// <summary>
+        /// Log out the information of the specdetail object
+        /// </summary>
+        /// <param name="data">The specDetails object to be logged</param>
         public void LogSpecData(SpecDetails data)
         {
             _logger.LogInformation("PDF Data Extracted:");

@@ -1,12 +1,5 @@
-﻿using iText.Layout.Borders;
-using Microsoft.Extensions.DependencyInjection;
-using MonitoringService.Domain.Models;
+﻿using MonitoringService.Domain.Models;
 using MonitoringService.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MonitoringService.Persistence
 {
@@ -77,7 +70,7 @@ namespace MonitoringService.Persistence
                 {
                     _logger.LogWarning($"Skipping document {specRowDocument.FileName} due to missing information.");
                     var issue = $"There was an issue retrieving some information from spec {specRowDocument.FileName} in the {specRowDocument.Folder} folder. Please review to ensure spec is formatted correctly and fully complete and update the file.\n";
-                    _emailService.SendAdminErrorMail(specRowDocument.FileName, issue, specRowDocument.Folder);
+                    _emailService.SendAdminErrorMail(issue, specRowDocument.Folder);
                 }
             }
 

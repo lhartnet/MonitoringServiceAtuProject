@@ -1,17 +1,15 @@
 ﻿using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf;
 using MonitoringService.Domain.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MonitoringService.Services
 {
+    /// <summary>
+    /// Class to handle extracting information from the PDFs
+    /// </summary>
     public class ParsePdfs
     {
-        //private readonly ILogger<ParsePdfs> _logger;
         private readonly Logging _logger;
         private readonly EmailService _emailService;
         private readonly SpecDetailsManagement _specDetailsManagement;
@@ -23,6 +21,12 @@ namespace MonitoringService.Services
             _specDetailsManagement = specDetailsManagement;
         }
 
+        /// <summary>
+        /// Open the pdf file and read the entire document. Call ParseSpecData to extract the information.
+        /// </summary>
+        /// <param name="pdfPath">The location and name of the file we want to get data from</param>
+        /// <param name="folder">string indicating if this is an ongoing or approved folder item</param>
+        /// <returns>Return SpecDetails object with information from pdf set to it</returns>
         public SpecDetails ExtractSpecData(string pdfPath, string folder)
         {
             try
@@ -38,7 +42,7 @@ namespace MonitoringService.Services
                     }
                     string pdfText = textBuilder.ToString();
                     var pdfData = ParseSpecData(pdfText, fileName, folder);
-                     _logger.LogSpecData(pdfData);
+                    _logger.LogSpecData(pdfData);
                     return pdfData;
                 }
             }
@@ -46,11 +50,19 @@ namespace MonitoringService.Services
             {
                 _logger.LogError($"Error reading PDF file {pdfPath}: {ex.Message}");
                 var issue = $"There was an issue extracting data from {pdfPath}. The exception message is as follows:\n{ex.Message} Please review.";
-                _emailService.SendAdminErrorMail(Path.GetFileName(pdfPath), issue, folder);
+                _emailService.SendAdminErrorMail(issue, folder);
                 return null;
             }
         }
 
+        /// <summary>
+        /// Extract the specDetails properties from the pdf and call SetSpecProperties to store them.
+        /// Read the title, then keep reading until the next title is reached for the value.
+        /// </summary>
+        /// <param name="pdfText">The read pdf to be interpreted</param>
+        /// <param name="fileName">The name of the file being read as a string</param>
+        /// <param name="folder">The type of folder the file is in as a string</param>
+        /// <returns>Return the SpecDetails object with info extracted from pdf</returns>
         public SpecDetails ParseSpecData(string pdfText, string fileName, string folder)
         {
             var data = new SpecDetails();
