@@ -1,4 +1,5 @@
-﻿using MonitoringService.Domain.Models;
+﻿using Microsoft.Extensions.Options;
+using MonitoringService.Domain.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -13,10 +14,10 @@ namespace MonitoringService.Services
         private readonly Logging _logger;
         private string _approvedCsvPath;
 
-        public CsvFileManagement(Logging logging, string approvedCsvPath)
+        public CsvFileManagement(Logging logging, IOptions<ConfigurableSettings> folderSettings)
         {
             _logger = logging;
-            _approvedCsvPath = approvedCsvPath;
+            _approvedCsvPath = folderSettings.Value.ApprovedCsv;
         }
 
         public void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)

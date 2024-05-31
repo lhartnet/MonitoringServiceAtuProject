@@ -1,11 +1,4 @@
-using iText.Kernel.Pdf.Canvas.Parser;
-using iText.Kernel.Pdf;
 using Microsoft.Extensions.Options;
-using System.Text;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-using System.Globalization;
-using iText.Layout.Borders;
 using MonitoringService.Persistence;
 using MonitoringService.Services;
 using MonitoringService.Domain.Models;
@@ -26,11 +19,8 @@ namespace MonitoringService
         private readonly string _approvedCsvPath;
         private readonly EmailService _emailService;
         private readonly int _delayBetweenRuns;
-        //private readonly ApplicationContext _dbContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        private readonly string _previousOngoingFileNamesPath;
-        private readonly string _previousApprovedFileNamesPath;
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
@@ -48,15 +38,9 @@ namespace MonitoringService
             _specDetailsManagement = specDetailsManagement;
             _specDbOperations = specDbOperations;
             _csvFileManagement = csvFileManagement;
-
-            _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
-            _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
-            //_previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
             _previousOngoingFiles = _specDbOperations.GetFileNamesFromDatabase("Ongoing");
             _previousApprovedFiles = _specDbOperations.GetFileNamesFromDatabase("Approved");
-            //_previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
-            //_dbContext = context;
             _fileDirectorySetup.EnsureDirectoriesExist(_ongoingFolderPath, _approvedFolderPath, _approvedCsvPath);
         }
 
@@ -93,10 +77,8 @@ namespace MonitoringService
                     _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
                     var ongoingFiles = _newFileManagment.CheckFolderContents(_ongoingFolderPath);
 
-
                     _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
                     var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
-
 
                     _logger.LogInformation("Comparing ongoing files...");
                     string[] newOngoingFiles = _newFileManagment.CompareFolderContents(ongoingFiles, _previousOngoingFiles);

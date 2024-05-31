@@ -8,21 +8,6 @@ namespace MonitoringService.Services
 {
     public class FileDirectorySetup
     {
-        //private void EnsureDirectoriesExist()
-        //{
-        //    CreateDirectoryIfNotExists(_ongoingFolderPath);
-        //    CreateDirectoryIfNotExists(_approvedFolderPath);
-        //    CreateDirectoryIfNotExists(_approvedCsvPath);
-        //}
-
-        //private void CreateDirectoryIfNotExists(string path)
-        //{
-        //    if (!Directory.Exists(path))
-        //    {
-        //        Directory.CreateDirectory(path);
-        //        _logger.LogInformation($"Created directory at: {path}");
-        //    }
-        //}
 
         private readonly ILogger<FileDirectorySetup> _logger;
 
