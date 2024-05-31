@@ -131,7 +131,7 @@ namespace MonitoringService
 
                     }
 
-                    // APPROVED FILES: If the pdf has all the information needed for the specDetails object save it to the database and e-mail recipeients about them.
+                    // APPROVED FILES: If the pdf has all the information needed for the specDetails object save it to the database and e-mail recipients about them.
                     // If there is information missing from the pdf for the specDetails object do not save this to the database and email admin about the issue.
                     if (newApprovedFiles.Length > 0)
                     {
