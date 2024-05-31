@@ -5,6 +5,7 @@ using System.Text;
 using MonitoringService.Services;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace MonitoringService
 {
@@ -13,6 +14,7 @@ namespace MonitoringService
         private readonly ILogger<Worker> _logger;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
+        private readonly string _approvedCsvPath;
         private readonly EmailService _emailService;
         private readonly int _delayBetweenRuns;
         //private readonly ApplicationContext _dbContext;
@@ -28,6 +30,7 @@ namespace MonitoringService
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
             _approvedFolderPath = folderSettings.Value.Approved;
+            _approvedCsvPath = folderSettings.Value.ApprovedCsv;
             _delayBetweenRuns = folderSettings.Value.MsBetweenRuns;
             _serviceScopeFactory = serviceScopeFactory;
 
@@ -38,7 +41,25 @@ namespace MonitoringService
             _previousApprovedFiles = GetFileNamesFromDatabase("Approved");
             //_previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
-            //_dbContext = context;   
+            //_dbContext = context;
+           
+            EnsureDirectoriesExist();
+        }
+
+        private void EnsureDirectoriesExist()
+        {
+            CreateDirectoryIfNotExists(_ongoingFolderPath);
+            CreateDirectoryIfNotExists(_approvedFolderPath);
+            CreateDirectoryIfNotExists(_approvedCsvPath);
+        }
+
+        private void CreateDirectoryIfNotExists(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+                _logger.LogInformation($"Created directory at: {path}");
+            }
         }
 
         private List<string> LoadPreviousFileNames(string filePath)
@@ -147,6 +168,7 @@ namespace MonitoringService
 
                         SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
                         SaveToDatabase(listApprovedFiles);
+                        CreateAndSaveCsvFile(listApprovedFiles);
                     }
                 }
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
@@ -396,6 +418,24 @@ namespace MonitoringService
             }
             
             dbContext.SaveChanges();
+        }
+
+        private void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)
+        {
+            string todayDate = DateTime.Now.ToString("yyyyMd", CultureInfo.InvariantCulture);
+            string csvFileName = $"bvlib_{todayDate}.csv";
+            string csvFilePath = Path.Combine(_approvedCsvPath, csvFileName);
+
+            var csvContent = new StringBuilder();
+            csvContent.AppendLine("Title,Author,Revision,Date,Area,Purpose,Description");
+
+            foreach (var detail in fileDetails)
+            {
+                csvContent.AppendLine($"{detail.Title},{detail.Author},{detail.Revision},{detail.Date},{detail.Area},{detail.Purpose},{detail.Description}");
+            }
+
+            File.WriteAllText(csvFilePath, csvContent.ToString());
+            _logger.LogInformation($"CSV file created at {csvFilePath}");
         }
     }
 }
