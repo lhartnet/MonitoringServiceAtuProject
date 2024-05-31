@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using System.Text;
 using MonitoringService.Services;
 using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 namespace MonitoringService
 {
@@ -32,8 +33,10 @@ namespace MonitoringService
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
-            _previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
-            _previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
+            //_previousOngoingFiles = LoadPreviousFileNames(_previousOngoingFileNamesPath);
+            _previousOngoingFiles = GetFileNamesFromDatabase("Ongoing");
+            _previousApprovedFiles = GetFileNamesFromDatabase("Approved");
+            //_previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
             //_dbContext = context;   
         }
@@ -52,7 +55,39 @@ namespace MonitoringService
             File.WriteAllLines(filePath, files);
         }
 
+        private List<string> GetFileNamesFromDatabase(string Folder)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
+            return dbContext.SpecDetails.Where(s => s.Folder == Folder).Select(s => s.FileName).ToList();
+        }
+
+        public List<SpecDetails> GetDatabaseEntries(string folder)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
+            List<SpecDetails> entries = new List<SpecDetails>();
+
+            if (folder == "Ongoing")
+            {
+                entries = dbContext.SpecDetails.Where(s => s.Folder == "Ongoing").ToList();
+            } else if (folder == "Approved")
+            {
+               entries = dbContext.SpecDetails.Where(s => s.Folder == "Approved").ToList();
+            }
+
+            List<SpecDetails> existingSpecs = new List<SpecDetails>();
+
+            Console.WriteLine("Database Entries:");
+            foreach (var entry in entries)
+            {
+                Console.WriteLine($"ID: {entry.Id}, Title: {entry.Title}, Author: {entry.Author}");
+                existingSpecs.Add(entry);
+            }
+
+            return existingSpecs;
+        }
 
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,14 +104,16 @@ namespace MonitoringService
                     _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
                     var ongoingFiles = CheckFolderContents(_ongoingFolderPath);
 
+                    
                     _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
                     var approvedFiles = CheckFolderContents(_approvedFolderPath);
 
+
                     _logger.LogInformation("Comparing ongoing files...");
-                    string[] newOngoingFiles = CompareFolderContents(ongoingFiles, _previousOngoingFiles, _previousOngoingFileNamesPath);
+                    string[] newOngoingFiles = CompareFolderContents(ongoingFiles, _previousOngoingFiles);
 
                     _logger.LogInformation("Comparing approved files...");
-                    string[] newApprovedFiles = CompareFolderContents(approvedFiles, _previousApprovedFiles, _previousApprovedFileNamesPath);
+                    string[] newApprovedFiles = CompareFolderContents(approvedFiles, _previousApprovedFiles);
 
                     List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
@@ -87,7 +124,7 @@ namespace MonitoringService
                         {
                             if (Path.GetExtension(file) == ".pdf")
                             {
-                                var fileData = ExtractSpecData(file);
+                                var fileData = ExtractSpecData(file, "Ongoing");
 
                                 listOngoingFiles.Add(fileData);
                             }
@@ -103,7 +140,7 @@ namespace MonitoringService
                         {
                             if (Path.GetExtension(file) == ".pdf")
                             {
-                                var fileData = ExtractSpecData(file);
+                                var fileData = ExtractSpecData(file, "Approved");
                                 listApprovedFiles.Add(fileData);
                             }
                         }
@@ -121,13 +158,19 @@ namespace MonitoringService
             try
             {
                 string[] files = Directory.GetFiles(filePath);
+                //List<string> fileNames = new List<string>();
+
+                //foreach (string file in files)
+                //{
+                //    fileNames.Add(Path.GetFileName(file));
+                //}
 
                 _logger.LogInformation($"Files in folder {filePath}:");
                 //foreach (string file in files)
                 //{
                 //    _logger.LogInformation($"- {Path.GetFileName(file)}");
                 //}
-                return files;
+                return files.ToArray();
             }
             catch (Exception ex)
             {
@@ -136,18 +179,55 @@ namespace MonitoringService
             }
         }
 
-        private string[] CompareFolderContents(string[] currentFiles, List<string> existingFiles, string filePath)
+        private string[] CompareFolderContents(string[] currentFiles, List<string> existingFiles)
         {
-            var newFiles = currentFiles.Except(existingFiles).ToArray();
+
+            //List<string> fileNames = new List<string>();
+
+            //foreach (string file in currentFiles)
+            //{
+            //    fileNames.Add(Path.GetFileName(file));
+            //}
+
+
+
+            //var newFiles = fileNames.Except(existingFiles).ToArray();
+            //if (newFiles.Any())
+            //{
+            //    _logger.LogInformation("New files added since last run:");
+            //    foreach (string newFile in newFiles)
+            //    {
+            //        _logger.LogInformation("File added: {file}", Path.GetFileName(newFile));
+            //    }
+            //    //SavePreviousFileNames(filePath, currentFiles);
+            //    return newFiles;
+            //}
+            //else
+            //{
+            //    _logger.LogInformation("No new files added since last run.");
+            //    return new string[0];
+            //}
+
+            List<string> newFiles = new List<string>();
+
+            foreach (string currentFile in currentFiles)
+            {
+                string fileName = Path.GetFileName(currentFile);
+                if (!existingFiles.Contains(fileName))
+                {
+                    newFiles.Add(currentFile);
+                }
+            }
+
             if (newFiles.Any())
             {
                 _logger.LogInformation("New files added since last run:");
                 foreach (string newFile in newFiles)
                 {
-                    _logger.LogInformation("File added: {file}", Path.GetFileName(newFile));
+                    _logger.LogInformation("File added: {file}", newFile);
                 }
                 //SavePreviousFileNames(filePath, currentFiles);
-                return newFiles;
+                return newFiles.ToArray();
             }
             else
             {
@@ -156,7 +236,9 @@ namespace MonitoringService
             }
         }
 
-        private SpecDetails ExtractSpecData(string pdfPath)
+
+
+        private SpecDetails ExtractSpecData(string pdfPath, string folder)
         {
             try
             {
@@ -170,7 +252,7 @@ namespace MonitoringService
                         textBuilder.Append(PdfTextExtractor.GetTextFromPage(pdfDoc.GetPage(i)));
                     }
                     string pdfText = textBuilder.ToString();
-                    var pdfData = ParseSpecData(pdfText, fileName);
+                    var pdfData = ParseSpecData(pdfText, fileName, folder);
                     LogSpecData(pdfData);
                     return pdfData;
                 }
@@ -182,7 +264,7 @@ namespace MonitoringService
             }
         }
 
-        private SpecDetails ParseSpecData(string pdfText, string fileName)
+        private SpecDetails ParseSpecData(string pdfText, string fileName, string folder)
         {
             var data = new SpecDetails();
             var lines = pdfText.Split('\n');
@@ -229,6 +311,7 @@ namespace MonitoringService
             }
 
             SetSpecProperties(data, "FileName", fileName);
+            SetSpecProperties(data, "Folder", folder);
 
             return data;
         }
@@ -261,6 +344,9 @@ namespace MonitoringService
                 case "FileName":
                     data.FileName = value;
                     break;
+                case "Folder":
+                    data.Folder = value;
+                    break;
 
             }
         }
@@ -276,6 +362,7 @@ namespace MonitoringService
             _logger.LogInformation($"Purpose: {data.Purpose}");
             _logger.LogInformation($"Description: {data.Description}");
             _logger.LogInformation($"File Name: {data.FileName}");
+            _logger.LogInformation($"Folder: {data.Folder}");
         }
 
         private void SendNewFilesEmail(List<SpecDetails> fileDetails, string[] newFiles, string folder)
@@ -305,9 +392,9 @@ namespace MonitoringService
 
             foreach (var document in details)
             {
-                dbContext.SpecDetail.Add(document);
+                dbContext.SpecDetails.Add(document);
             }
-
+            
             dbContext.SaveChanges();
         }
     }
