@@ -20,6 +20,7 @@ namespace MonitoringService
         private readonly ParsePdfs _parsePdfs;
         private readonly SpecDetailsManagement _specDetailsManagement;
         private readonly SpecDbOperations _specDbOperations;
+        private readonly CsvFileManagement _csvFileManagement;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly string _approvedCsvPath;
@@ -33,7 +34,7 @@ namespace MonitoringService
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, ParsePdfs parsePdfs, SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement , SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -46,6 +47,7 @@ namespace MonitoringService
             _parsePdfs = parsePdfs;
             _specDetailsManagement = specDetailsManagement;
             _specDbOperations = specDbOperations;
+            _csvFileManagement = csvFileManagement;
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
@@ -176,7 +178,7 @@ namespace MonitoringService
                         {
                             _emailService.SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Ongoing");
                             _specDbOperations.SaveToDatabase(listApprovedFiles);
-                            CreateAndSaveCsvFile(listApprovedFiles);
+                            _csvFileManagement.CreateAndSaveCsvFile(listApprovedFiles);
                         }
 
                         if (emptyListApprovedFiles.Count > 0)
@@ -203,52 +205,7 @@ namespace MonitoringService
         }
 
         
-
-
         
-
-        
-       
-
-        
-
-        //private void SaveToDatabase(List<SpecDetails> details)
-        //{
-        //    using var scope = _serviceScopeFactory.CreateScope();
-        //    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
-
-        //    foreach (var document in details)
-        //    {
-        //        dbContext.SpecDetails.Add(document);
-        //    }
-
-        //    dbContext.SaveChanges();
-        //}
-
-
-       
-   
-
-       
-
-
-        private void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)
-        {
-            string todayDate = DateTime.Now.ToString("yyyyMd", CultureInfo.InvariantCulture);
-            string csvFileName = $"bvlib_{todayDate}.csv";
-            string csvFilePath = Path.Combine(_approvedCsvPath, csvFileName);
-
-            var csvContent = new StringBuilder();
-            csvContent.AppendLine("Title,Author,Revision,Date,Area,Purpose,Description");
-
-            foreach (var detail in fileDetails)
-            {
-                csvContent.AppendLine($"{detail.Title},{detail.Author},{detail.Revision},{detail.Date},{detail.Area},{detail.Purpose},{detail.Description}");
-            }
-
-            File.WriteAllText(csvFilePath, csvContent.ToString());
-            _logger.LogInformation($"CSV file created at {csvFilePath}");
-        }
     }
 }
 
