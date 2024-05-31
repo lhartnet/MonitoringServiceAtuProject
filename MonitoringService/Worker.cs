@@ -6,6 +6,7 @@ using MonitoringService.Services;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using iText.Layout.Borders;
 
 namespace MonitoringService
 {
@@ -204,32 +205,7 @@ namespace MonitoringService
         private string[] CompareFolderContents(string[] currentFiles, List<string> existingFiles)
         {
 
-            //List<string> fileNames = new List<string>();
-
-            //foreach (string file in currentFiles)
-            //{
-            //    fileNames.Add(Path.GetFileName(file));
-            //}
-
-
-
-            //var newFiles = fileNames.Except(existingFiles).ToArray();
-            //if (newFiles.Any())
-            //{
-            //    _logger.LogInformation("New files added since last run:");
-            //    foreach (string newFile in newFiles)
-            //    {
-            //        _logger.LogInformation("File added: {file}", Path.GetFileName(newFile));
-            //    }
-            //    //SavePreviousFileNames(filePath, currentFiles);
-            //    return newFiles;
-            //}
-            //else
-            //{
-            //    _logger.LogInformation("No new files added since last run.");
-            //    return new string[0];
-            //}
-
+            
             List<string> newFiles = new List<string>();
 
             foreach (string currentFile in currentFiles)
@@ -248,7 +224,6 @@ namespace MonitoringService
                 {
                     _logger.LogInformation("File added: {file}", newFile);
                 }
-                //SavePreviousFileNames(filePath, currentFiles);
                 return newFiles.ToArray();
             }
             else
@@ -407,18 +382,66 @@ namespace MonitoringService
             _emailService.SendEmail(subject, body.ToString());
         }
 
+        //private void SaveToDatabase(List<SpecDetails> details)
+        //{
+        //    using var scope = _serviceScopeFactory.CreateScope();
+        //    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
+
+        //    foreach (var document in details)
+        //    {
+        //        dbContext.SpecDetails.Add(document);
+        //    }
+            
+        //    dbContext.SaveChanges();
+        //}
+
+
         private void SaveToDatabase(List<SpecDetails> details)
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
-            foreach (var document in details)
+            foreach (var specRowDocument in details)
             {
-                dbContext.SpecDetails.Add(document);
+                if (AllSpecFieldsEntered(specRowDocument))
+                {
+                    dbContext.SpecDetails.Add(specRowDocument);
+                }
+                else
+                {
+                    _logger.LogWarning($"Skipping document {specRowDocument.FileName} due to missing information.");
+                    var issue = $"There was an issue retrieving some information from spec {specRowDocument.FileName} in the {specRowDocument.Folder} folder. Please review to ensure spec is formatted correctly and fully complete and update the file.\n";
+                    SendAdminErrorMail(specRowDocument.FileName, issue, specRowDocument.Folder);
+                }
             }
-            
+
             dbContext.SaveChanges();
         }
+
+        private bool AllSpecFieldsEntered(SpecDetails spec)
+        {
+            return !string.IsNullOrEmpty(spec.Title)
+                   && !string.IsNullOrEmpty(spec.Author)
+                   && !string.IsNullOrEmpty(spec.Revision)
+                   && !string.IsNullOrEmpty(spec.Date)
+                   && !string.IsNullOrEmpty(spec.Area)
+                   && !string.IsNullOrEmpty(spec.Purpose)
+                   && !string.IsNullOrEmpty(spec.Description)
+                   && !string.IsNullOrEmpty(spec.FileName)
+                   && !string.IsNullOrEmpty(spec.Folder);
+        }
+
+        private void SendAdminErrorMail(string fileName, string issue, string folder)
+        {
+            var subject = $"ATTN: Error with {folder} spec {fileName}";
+            var body = new StringBuilder();
+            body.AppendLine("Hi,\nThere was an issue with the spec monitoring service.\n");
+            body.AppendLine(issue);
+
+            body.AppendLine("\nThanks");
+            _emailService.SendEmail(subject, body.ToString(), "admin");
+        }
+
 
         private void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)
         {
