@@ -16,6 +16,7 @@ namespace MonitoringService
     {
         private readonly ILogger<Worker> _logger;
         private readonly FileDirectorySetup _fileDirectorySetup;
+        private readonly NewFileManagment _newFileManagment;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly string _approvedCsvPath;
@@ -29,7 +30,7 @@ namespace MonitoringService
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -38,6 +39,7 @@ namespace MonitoringService
             _delayBetweenRuns = folderSettings.Value.MsBetweenRuns;
             _serviceScopeFactory = serviceScopeFactory;
             _fileDirectorySetup = fileDirectorySetup;
+            _newFileManagment = newFileManagment;
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
@@ -114,18 +116,18 @@ namespace MonitoringService
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
                     _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
-                    var ongoingFiles = CheckFolderContents(_ongoingFolderPath);
+                    var ongoingFiles = _newFileManagment.CheckFolderContents(_ongoingFolderPath);
 
 
                     _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
-                    var approvedFiles = CheckFolderContents(_approvedFolderPath);
+                    var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
 
 
                     _logger.LogInformation("Comparing ongoing files...");
-                    string[] newOngoingFiles = CompareFolderContents(ongoingFiles, _previousOngoingFiles);
+                    string[] newOngoingFiles = _newFileManagment.CompareFolderContents(ongoingFiles, _previousOngoingFiles);
 
                     _logger.LogInformation("Comparing approved files...");
-                    string[] newApprovedFiles = CompareFolderContents(approvedFiles, _previousApprovedFiles);
+                    string[] newApprovedFiles = _newFileManagment.CompareFolderContents(approvedFiles, _previousApprovedFiles);
 
                     List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
@@ -155,7 +157,7 @@ namespace MonitoringService
 
                         if (listOngoingFiles.Count > 0)
                         {
-                            SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
+                            _emailService.SendNewFilesEmail(listOngoingFiles, newOngoingFiles, "Ongoing");
                             SaveToDatabase(listOngoingFiles);
                         }
 
@@ -172,7 +174,7 @@ namespace MonitoringService
                             var issue =
                                 $"Please review the following specs in the ongoing folder:\n{fileNameString}\n\nSome data is missing.";
 
-                            SendAdminErrorMail(fileNameString, issue, "Ongoing");
+                            _emailService.SendAdminErrorMail(fileNameString, issue, "Ongoing");
                         }
 
                     }
@@ -199,7 +201,7 @@ namespace MonitoringService
 
                         if (listApprovedFiles.Count > 0)
                         {
-                            SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Ongoing");
+                            _emailService.SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Ongoing");
                             SaveToDatabase(listApprovedFiles);
                             CreateAndSaveCsvFile(listApprovedFiles);
                         }
@@ -217,7 +219,7 @@ namespace MonitoringService
                             var issue =
                                 $"Please review the following specs in the approved folder:\n{fileNameString}\n\nSome data is missing.";
 
-                            SendAdminErrorMail(fileNameString, issue, "Approved");
+                            _emailService.SendAdminErrorMail(fileNameString, issue, "Approved");
                         }
 
                     }
@@ -227,55 +229,7 @@ namespace MonitoringService
             }
         }
 
-        private string[] CheckFolderContents(string filePath)
-        {
-            try
-            {
-                string[] files = Directory.GetFiles(filePath);
-                _logger.LogInformation($"Retrieved files in folder {filePath}:");
-                return files.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error reading folder contents for {filePath}: {ex.Message}");
-                var issue =
-                    $"There was an issue attempting to read the folder contents for {filePath} by the monitoring service. Here is the exception message:\n{ex.Message}\n\nPlease review.";
-                SendAdminErrorMail(filePath, issue, filePath);
-                return new string[0];
-            }
-        }
-
-        private string[] CompareFolderContents(string[] currentFiles, List<string> existingFiles)
-        {
-
-
-            List<string> newFiles = new List<string>();
-
-            foreach (string currentFile in currentFiles)
-            {
-                string fileName = Path.GetFileName(currentFile);
-                if (!existingFiles.Contains(fileName))
-                {
-                    newFiles.Add(currentFile);
-                }
-            }
-
-            if (newFiles.Any())
-            {
-                _logger.LogInformation("New files added since last run:");
-                foreach (string newFile in newFiles)
-                {
-                    _logger.LogInformation("File added: {file}", newFile);
-                }
-                return newFiles.ToArray();
-            }
-            else
-            {
-                _logger.LogInformation("No new files added since last run.");
-                return new string[0];
-            }
-        }
-
+        
 
 
         private SpecDetails ExtractSpecData(string pdfPath, string folder)
@@ -301,7 +255,7 @@ namespace MonitoringService
             {
                 _logger.LogError($"Error reading PDF file {pdfPath}: {ex.Message}");
                 var issue = $"There was an issue extracting data from {pdfPath}. The exception message is as follows:\n{ex.Message} Please review.";
-                SendAdminErrorMail(Path.GetFileName(pdfPath), issue, folder );
+                _emailService.SendAdminErrorMail(Path.GetFileName(pdfPath), issue, folder );
                 return null;
             }
         }
@@ -407,25 +361,7 @@ namespace MonitoringService
             _logger.LogInformation($"Folder: {data.Folder}");
         }
 
-        private void SendNewFilesEmail(List<SpecDetails> fileDetails, string[] newFiles, string folder)
-        {
-            var subject = $"ATTN: New files in {folder} folder";
-            var body = new StringBuilder();
-            body.AppendLine("Hi,\nThe following new files were detected and require attention:\n");
-            foreach (var newFile in fileDetails)
-            {
-                //var details = file
-                //body.AppendLine(Path.GetFileName(newFile));
-                //body.AppendLine("         Title: " +)
-                body.AppendLine(newFile.FileName);
-                body.AppendLine("Title:   " + newFile.Title);
-                body.AppendLine("Purpose: " + newFile.Purpose);
-                body.AppendLine("");
-            }
-
-            body.AppendLine("\nThanks");
-            _emailService.SendEmail(subject, body.ToString());
-        }
+        
 
         //private void SaveToDatabase(List<SpecDetails> details)
         //{
@@ -456,7 +392,7 @@ namespace MonitoringService
                 {
                     _logger.LogWarning($"Skipping document {specRowDocument.FileName} due to missing information.");
                     var issue = $"There was an issue retrieving some information from spec {specRowDocument.FileName} in the {specRowDocument.Folder} folder. Please review to ensure spec is formatted correctly and fully complete and update the file.\n";
-                    SendAdminErrorMail(specRowDocument.FileName, issue, specRowDocument.Folder);
+                    _emailService.SendAdminErrorMail(specRowDocument.FileName, issue, specRowDocument.Folder);
                 }
             }
 
@@ -476,16 +412,7 @@ namespace MonitoringService
                    && !string.IsNullOrEmpty(spec.Folder);
         }
 
-        private void SendAdminErrorMail(string fileName, string issue, string folder)
-        {
-            var subject = $"ATTN: Error with {folder} spec";
-            var body = new StringBuilder();
-            body.AppendLine("Hi,\nThere was an issue with the spec monitoring service.\n");
-            body.AppendLine(issue);
-
-            body.AppendLine("\nThanks");
-            _emailService.SendEmail(subject, body.ToString(), "admin");
-        }
+       
 
 
         private void CreateAndSaveCsvFile(List<SpecDetails> fileDetails)
