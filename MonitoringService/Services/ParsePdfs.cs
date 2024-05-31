@@ -14,11 +14,13 @@ namespace MonitoringService.Services
         //private readonly ILogger<ParsePdfs> _logger;
         private readonly Logging _logger;
         private readonly EmailService _emailService;
+        private readonly SpecDetailsManagement _specDetailsManagement;
 
-        public ParsePdfs(Logging logging, EmailService emailService)
+        public ParsePdfs(Logging logging, EmailService emailService, SpecDetailsManagement specDetailsManagement)
         {
             _logger = logging;
             _emailService = emailService;
+            _specDetailsManagement = specDetailsManagement;
         }
 
         public SpecDetails ExtractSpecData(string pdfPath, string folder)
@@ -71,7 +73,7 @@ namespace MonitoringService.Services
                     case "Description":
                         if (currentSection != null)
                         {
-                            SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
+                            _specDetailsManagement.SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
                         }
                         currentSection = trimmedLine;
                         sectionContent.Clear();
@@ -92,11 +94,11 @@ namespace MonitoringService.Services
 
             if (currentSection != null)
             {
-                SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
+                _specDetailsManagement.SetSpecProperties(data, currentSection, sectionContent.ToString().Trim());
             }
 
-            SetSpecProperties(data, "FileName", fileName);
-            SetSpecProperties(data, "Folder", folder);
+            _specDetailsManagement.SetSpecProperties(data, "FileName", fileName);
+            _specDetailsManagement.SetSpecProperties(data, "Folder", folder);
 
             return data;
         }

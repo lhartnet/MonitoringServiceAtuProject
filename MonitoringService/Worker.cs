@@ -18,6 +18,7 @@ namespace MonitoringService
         private readonly FileDirectorySetup _fileDirectorySetup;
         private readonly NewFileManagment _newFileManagment;
         private readonly ParsePdfs _parsePdfs;
+        private readonly SpecDetailsManagement _specDetailsManagement;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly string _approvedCsvPath;
@@ -31,7 +32,7 @@ namespace MonitoringService
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, ParsePdfs parsePdfs, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , NewFileManagment newFileManagment, ParsePdfs parsePdfs, SpecDetailsManagement specDetailsManagement, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -42,6 +43,7 @@ namespace MonitoringService
             _fileDirectorySetup = fileDirectorySetup;
             _newFileManagment = newFileManagment;
             _parsePdfs = parsePdfs;
+            _specDetailsManagement = specDetailsManagement;
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
@@ -144,7 +146,7 @@ namespace MonitoringService
                             if (Path.GetExtension(file) == ".pdf")
                             {
                                 var fileData = _parsePdfs.ExtractSpecData(file, "Ongoing");
-                                bool noEmptyFields = AllSpecFieldsEntered(fileData);
+                                bool noEmptyFields = _specDetailsManagement.AllSpecFieldsEntered(fileData);
                                 if (noEmptyFields)
                                 {
                                     listOngoingFiles.Add(fileData);
@@ -188,7 +190,7 @@ namespace MonitoringService
                             if (Path.GetExtension(file) == ".pdf")
                             {
                                 var fileData = _parsePdfs.ExtractSpecData(file, "Approved");
-                                bool noEmptyFields = AllSpecFieldsEntered(fileData);
+                                bool noEmptyFields = _specDetailsManagement.AllSpecFieldsEntered(fileData);
                                 if (noEmptyFields)
                                 {
                                     listApprovedFiles.Add(fileData);
@@ -236,41 +238,7 @@ namespace MonitoringService
 
         
 
-        private void SetSpecProperties(SpecDetails data, string property, string value)
-        {
-            switch (property)
-            {
-                case "Title":
-                    data.Title = value;
-                    break;
-                case "Author":
-                    data.Author = value;
-                    break;
-                case "Revision":
-                    data.Revision = value;
-                    break;
-                case "Date":
-                    data.Date = value;
-                    break;
-                case "Area":
-                    data.Area = value;
-                    break;
-                case "Purpose":
-                    data.Purpose = value;
-                    break;
-                case "Description":
-                    data.Description = value;
-                    break;
-                case "FileName":
-                    data.FileName = value;
-                    break;
-                case "Folder":
-                    data.Folder = value;
-                    break;
-
-            }
-        }
-
+        
        
 
         
@@ -296,7 +264,7 @@ namespace MonitoringService
 
             foreach (var specRowDocument in details)
             {
-                if (AllSpecFieldsEntered(specRowDocument))
+                if (_specDetailsManagement.AllSpecFieldsEntered(specRowDocument))
                 {
                     dbContext.SpecDetails.Add(specRowDocument);
                 }
@@ -311,18 +279,7 @@ namespace MonitoringService
             dbContext.SaveChanges();
         }
 
-        private bool AllSpecFieldsEntered(SpecDetails spec)
-        {
-            return !string.IsNullOrEmpty(spec.Title)
-                   && !string.IsNullOrEmpty(spec.Author)
-                   && !string.IsNullOrEmpty(spec.Revision)
-                   && !string.IsNullOrEmpty(spec.Date)
-                   && !string.IsNullOrEmpty(spec.Area)
-                   && !string.IsNullOrEmpty(spec.Purpose)
-                   && !string.IsNullOrEmpty(spec.Description)
-                   && !string.IsNullOrEmpty(spec.FileName)
-                   && !string.IsNullOrEmpty(spec.Folder);
-        }
+   
 
        
 
