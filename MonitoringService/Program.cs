@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MonitoringService;
-using MonitoringService.Services;
+using MonitoringService.Domain.Models;
+using MonitoringService.Emails;
+using MonitoringService.Persistence;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>

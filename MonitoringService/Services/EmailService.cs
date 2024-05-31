@@ -6,25 +6,16 @@ using System.Net.Mail;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using MonitoringService.Domain.Models;
 
-namespace MonitoringService.Services
+namespace MonitoringService.Emails
 {
-    public class EmailSettings
-    {
-        public string SmtpServer { get; set; }
-        public int SmtpPort { get; set; }
-        public string SenderEmail { get; set; }
-        public string SenderPassword { get; set; }
-        public string RecipientEmail { get; set; }
-        public string AdminEmail { get; set; }
-    }
-
     public class EmailService
     {
-        private readonly EmailSettings _emailSettings;
+        private readonly EmailProperties.EmailSettings _emailSettings;
         private readonly ILogger<Worker> _logger;
 
-        public EmailService(IOptions<EmailSettings> emailSettings, ILogger<Worker> logger)
+        public EmailService(IOptions<EmailProperties.EmailSettings> emailSettings, ILogger<Worker> logger)
         {
             _emailSettings = emailSettings.Value;
             _logger = logger;
@@ -57,7 +48,7 @@ namespace MonitoringService.Services
                     smtpClient.Send(mailMessage);
                 }
 
-                
+
             }
             catch (Exception ex)
             {

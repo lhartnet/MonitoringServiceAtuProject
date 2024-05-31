@@ -2,17 +2,20 @@ using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf;
 using Microsoft.Extensions.Options;
 using System.Text;
-using MonitoringService.Services;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using iText.Layout.Borders;
+using MonitoringService.Persistence;
+using MonitoringService.Services;
+using MonitoringService.Domain.Models;
 
 namespace MonitoringService
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
+        private readonly FileDirectorySetup _fileDirectorySetup;
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly string _approvedCsvPath;
@@ -26,7 +29,7 @@ namespace MonitoringService
         private readonly List<string> _previousOngoingFiles;
         private readonly List<string> _previousApprovedFiles;
 
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup , EmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -34,6 +37,7 @@ namespace MonitoringService
             _approvedCsvPath = folderSettings.Value.ApprovedCsv;
             _delayBetweenRuns = folderSettings.Value.MsBetweenRuns;
             _serviceScopeFactory = serviceScopeFactory;
+            _fileDirectorySetup = fileDirectorySetup;
 
             _previousOngoingFileNamesPath = "previousOngoingFiles.txt";
             _previousApprovedFileNamesPath = "previousApprovedFiles.txt";
@@ -43,25 +47,10 @@ namespace MonitoringService
             //_previousApprovedFiles = LoadPreviousFileNames(_previousApprovedFileNamesPath);
             _emailService = emailService;
             //_dbContext = context;
-
-            EnsureDirectoriesExist();
+            _fileDirectorySetup.EnsureDirectoriesExist(_ongoingFolderPath, _approvedFolderPath, _approvedCsvPath);
         }
 
-        private void EnsureDirectoriesExist()
-        {
-            CreateDirectoryIfNotExists(_ongoingFolderPath);
-            CreateDirectoryIfNotExists(_approvedFolderPath);
-            CreateDirectoryIfNotExists(_approvedCsvPath);
-        }
-
-        private void CreateDirectoryIfNotExists(string path)
-        {
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-                _logger.LogInformation($"Created directory at: {path}");
-            }
-        }
+        
 
         private List<string> LoadPreviousFileNames(string filePath)
         {

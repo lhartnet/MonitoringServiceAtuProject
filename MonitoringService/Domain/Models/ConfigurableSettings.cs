@@ -1,4 +1,4 @@
-﻿namespace MonitoringService
+﻿namespace MonitoringService.Domain.Models
 {
     public class ConfigurableSettings
     {
