@@ -233,23 +233,6 @@ namespace MonitoringService
 
                     }
 
-
-
-                    //if (newApprovedFiles.Length > 0)
-                    //{
-                    //    foreach (var file in newApprovedFiles)
-                    //    {
-                    //        if (Path.GetExtension(file) == ".pdf")
-                    //        {
-                    //            var fileData = ExtractSpecData(file, "Approved");
-                    //            listApprovedFiles.Add(fileData);
-                    //        }
-                    //    }
-
-                    //    SendNewFilesEmail(listApprovedFiles, newApprovedFiles, "Approved");
-                    //    SaveToDatabase(listApprovedFiles);
-
-                    //}
                 }
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
@@ -260,24 +243,16 @@ namespace MonitoringService
             try
             {
                 string[] files = Directory.GetFiles(filePath);
-                //List<string> fileNames = new List<string>();
-
-                //foreach (string file in files)
-                //{
-                //    fileNames.Add(Path.GetFileName(file));
-                //}
-
-                _logger.LogInformation($"Files in folder {filePath}:");
-                //foreach (string file in files)
-                //{
-                //    _logger.LogInformation($"- {Path.GetFileName(file)}");
-                //}
+                _logger.LogInformation($"Retrieved files in folder {filePath}:");
                 return files.ToArray();
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Error reading folder contents for {filePath}: {ex.Message}");
-                throw;
+                var issue =
+                    $"There was an issue attempting to read the folder contents for {filePath} by the monitoring service. Here is the exception message:\n{ex.Message}\n\nPlease review.";
+                SendAdminErrorMail(filePath, issue, filePath);
+                return new string[0];
             }
         }
 
@@ -336,7 +311,9 @@ namespace MonitoringService
             catch (Exception ex)
             {
                 _logger.LogError($"Error reading PDF file {pdfPath}: {ex.Message}");
-                throw new Exception($"Error extracting data from {pdfPath}: {ex.Message}");
+                var issue = $"There was an issue extracting data from {pdfPath}. The exception message is as follows:\n{ex.Message} Please review.";
+                SendAdminErrorMail(Path.GetFileName(pdfPath), issue, folder );
+                return null;
             }
         }
 
