@@ -4,13 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MonitoringService.Interfaces;
 
 namespace MonitoringService.Services
 {
     /// <summary>
     /// Class to manage logging, specifically where longer sections of logs are required
     /// </summary>
-    public class Logging
+    public class Logging : ILogging
     {
         private readonly ILogger<Logging> _logger;
 

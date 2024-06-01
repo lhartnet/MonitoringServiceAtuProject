@@ -2,6 +2,7 @@
 using iText.Kernel.Pdf;
 using MonitoringService.Domain.Models;
 using System.Text;
+using MonitoringService.Interfaces;
 
 namespace MonitoringService.Services
 {
@@ -10,11 +11,11 @@ namespace MonitoringService.Services
     /// </summary>
     public class ParsePdfs
     {
-        private readonly Logging _logger;
-        private readonly EmailService _emailService;
-        private readonly SpecDetailsManagement _specDetailsManagement;
+        private readonly ILogging _logger;
+        private readonly IEmailService _emailService;
+        private readonly ISpecDetailsManagement _specDetailsManagement;
 
-        public ParsePdfs(Logging logging, EmailService emailService, SpecDetailsManagement specDetailsManagement)
+        public ParsePdfs(ILogging logging, IEmailService emailService, ISpecDetailsManagement specDetailsManagement)
         {
             _logger = logging;
             _emailService = emailService;
