@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using MonitoringService.Interfaces;
 using MonitoringService.Services;
 
-namespace MonitoringService.Tests
+namespace MonitoringServiceTests.Services
 {
     [TestClass]
     public class NewFileManagmentTests
@@ -27,7 +27,7 @@ namespace MonitoringService.Tests
         [TestMethod]
         public void CheckFolderContents_ReturnsFileList_WhenNoException()
         {
-            // Arrange - set test direcory and mock 2 files
+            // Arrange - set test directory and mock 2 files
             var filePath = "test_directory";
             var expectedFiles = new string[] { Path.Combine(filePath, "file1.txt"), Path.Combine(filePath, "file2.txt") };
             Directory.CreateDirectory(filePath);

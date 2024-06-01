@@ -1,4 +1,5 @@
 ﻿using MonitoringService.Domain.Models;
+using MonitoringService.Interfaces;
 
 namespace MonitoringService.Services
 {
@@ -6,7 +7,7 @@ namespace MonitoringService.Services
     /// Class to manage the specDetails class
     /// </summary>
     /// <param name="paths">The directories we're check for as an array of strings</param>
-    public class SpecDetailsManagement
+    public class SpecDetailsManagement : ISpecDetailsManagement
     {
         /// <summary>
         /// Set the values of the properties of the SpecDetails class

@@ -13,9 +13,9 @@ namespace MonitoringService.Services
     {
         private readonly ILogging _logger;
         private readonly IEmailService _emailService;
-        private readonly SpecDetailsManagement _specDetailsManagement;
+        private readonly ISpecDetailsManagement _specDetailsManagement;
 
-        public ParsePdfs(ILogging logging, IEmailService emailService, SpecDetailsManagement specDetailsManagement)
+        public ParsePdfs(ILogging logging, IEmailService emailService, ISpecDetailsManagement specDetailsManagement)
         {
             _logger = logging;
             _emailService = emailService;

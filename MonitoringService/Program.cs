@@ -19,7 +19,7 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<CsvFileManagement>();
         services.AddSingleton<NewFileManagment>();
         services.AddSingleton<ParsePdfs>();
-        services.AddSingleton<SpecDetailsManagement>();
+        services.AddSingleton<ISpecDetailsManagement, SpecDetailsManagement>();
         services.AddSingleton<SpecDbOperations>();
         services.AddSingleton<ILogging, Logging>(); 
         services.AddHostedService<Worker>();

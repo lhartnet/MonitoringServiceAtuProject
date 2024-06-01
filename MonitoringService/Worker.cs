@@ -16,7 +16,7 @@ namespace MonitoringService
         private readonly FileDirectorySetup _fileDirectorySetup;
         private readonly NewFileManagment _newFileManagment;
         private readonly ParsePdfs _parsePdfs;
-        private readonly SpecDetailsManagement _specDetailsManagement;
+        private readonly ISpecDetailsManagement _specDetailsManagement;
         private readonly SpecDbOperations _specDbOperations;
         private readonly CsvFileManagement _csvFileManagement;
         private readonly string _ongoingFolderPath;
@@ -30,7 +30,7 @@ namespace MonitoringService
         private readonly List<string> _previousApprovedFiles;
 
         // Worker class constructor
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, IEmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, ISpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, IEmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
