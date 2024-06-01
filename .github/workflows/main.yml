@@ -33,3 +33,10 @@ jobs:
 
       - name: Print build success message
         run: echo "The repo successfully built!! :) "
+
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal
+
+      - name: Print test success message
+        run: echo "If you make it this far all of your tests are passing "
+
