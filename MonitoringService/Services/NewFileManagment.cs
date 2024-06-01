@@ -1,4 +1,6 @@
-﻿namespace MonitoringService.Services
+﻿using MonitoringService.Interfaces;
+
+namespace MonitoringService.Services
 {
     /// <summary>
     /// Class to hold logic for checking if new files have been added to our folders
@@ -6,9 +8,9 @@
     public class NewFileManagment
     {
         private readonly ILogger<NewFileManagment> _logger;
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
 
-        public NewFileManagment(ILogger<NewFileManagment> logger, EmailService emailService)
+        public NewFileManagment(ILogger<NewFileManagment> logger, IEmailService emailService)
         {
             _logger = logger;
             _emailService = emailService;

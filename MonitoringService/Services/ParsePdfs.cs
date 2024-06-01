@@ -12,10 +12,10 @@ namespace MonitoringService.Services
     public class ParsePdfs
     {
         private readonly ILogging _logger;
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
         private readonly SpecDetailsManagement _specDetailsManagement;
 
-        public ParsePdfs(ILogging logging, EmailService emailService, SpecDetailsManagement specDetailsManagement)
+        public ParsePdfs(ILogging logging, IEmailService emailService, SpecDetailsManagement specDetailsManagement)
         {
             _logger = logging;
             _emailService = emailService;

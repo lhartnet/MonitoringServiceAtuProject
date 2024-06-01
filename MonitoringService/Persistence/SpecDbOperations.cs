@@ -11,10 +11,10 @@ namespace MonitoringService.Persistence
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly SpecDetailsManagement _specDetailsManagement;
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
         private readonly ILogging _logger;
 
-        public SpecDbOperations(IServiceScopeFactory serviceScopeFactory, SpecDetailsManagement specDetailsManagement, EmailService emailService, ILogging logging)
+        public SpecDbOperations(IServiceScopeFactory serviceScopeFactory, SpecDetailsManagement specDetailsManagement, IEmailService emailService, ILogging logging)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _specDetailsManagement = specDetailsManagement;

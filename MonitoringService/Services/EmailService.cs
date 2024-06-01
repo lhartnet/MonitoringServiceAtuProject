@@ -3,13 +3,14 @@ using System.Net.Mail;
 using System.Net;
 using System.Text;
 using MonitoringService.Domain.Models;
+using MonitoringService.Interfaces;
 
 namespace MonitoringService.Services
 {
     /// <summary>
     /// Class to hold logic for sending e-mails to users
     /// </summary>
-    public class EmailService
+    public class EmailService : IEmailService
     {
         private readonly EmailProperties.EmailSettings _emailSettings;
         private readonly ILogger<Worker> _logger;
@@ -19,6 +20,7 @@ namespace MonitoringService.Services
             _emailSettings = emailSettings.Value;
             _logger = logger;
         }
+
 
         /// <summary>
         /// Send e-mail to users listed in "RecipientEmail" or "AdminEmail" setting in appsettings.json.

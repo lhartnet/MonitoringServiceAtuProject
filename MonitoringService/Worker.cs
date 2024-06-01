@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using MonitoringService.Persistence;
 using MonitoringService.Services;
 using MonitoringService.Domain.Models;
+using MonitoringService.Interfaces;
 
 namespace MonitoringService
 {
@@ -21,7 +22,7 @@ namespace MonitoringService
         private readonly string _ongoingFolderPath;
         private readonly string _approvedFolderPath;
         private readonly string _approvedCsvPath;
-        private readonly EmailService _emailService;
+        private readonly IEmailService _emailService;
         private readonly int _delayBetweenRuns;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
@@ -29,7 +30,7 @@ namespace MonitoringService
         private readonly List<string> _previousApprovedFiles;
 
         // Worker class constructor
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, EmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, SpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, IEmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
@@ -83,7 +84,7 @@ namespace MonitoringService
                     List<SpecDetails> emptyListOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> emptyListApprovedFiles = new List<SpecDetails>();
 
-                    // ONGOING FILES: If the pdf has all the information needed for the specDetails object save it to the database and e-mail recipeients about them.
+                    // ONGOING FILES: If the pdf has all the information needed for the specDetails object save it to the database and e-mail recipients about them.
                     // If there is information missing from the pdf for the specDetails object do not save this to the database and email admin about the issue.
                     if (newOngoingFiles.Length > 0)
                     {

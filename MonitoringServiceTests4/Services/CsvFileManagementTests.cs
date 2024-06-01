@@ -7,7 +7,7 @@ using System.Globalization;
 using System.Text;
 using MonitoringService.Interfaces;
 
-namespace MonitoringService.Tests
+namespace MonitoringServiceTests.Services
 {
     [TestClass]
     public class CsvFileManagementTests
