@@ -2,6 +2,7 @@
 using MonitoringService.Domain.Models;
 using System.Globalization;
 using System.Text;
+using MonitoringService.Interfaces;
 
 namespace MonitoringService.Services
 {
@@ -10,10 +11,10 @@ namespace MonitoringService.Services
     /// </summary>
     public class CsvFileManagement
     {
-        private readonly Logging _logger;
+        private readonly ILogging _logger;
         private readonly string _approvedCsvPath;
 
-        public CsvFileManagement(Logging logging, IOptions<ConfigurableSettings> folderSettings)
+        public CsvFileManagement(ILogging logging, IOptions<ConfigurableSettings> folderSettings)
         {
             _logger = logging;
             _approvedCsvPath = folderSettings.Value.ApprovedCsv;

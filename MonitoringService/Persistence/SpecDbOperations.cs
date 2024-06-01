@@ -1,4 +1,5 @@
 ﻿using MonitoringService.Domain.Models;
+using MonitoringService.Interfaces;
 using MonitoringService.Services;
 
 namespace MonitoringService.Persistence
@@ -11,9 +12,9 @@ namespace MonitoringService.Persistence
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly SpecDetailsManagement _specDetailsManagement;
         private readonly EmailService _emailService;
-        private readonly Logging _logger;
+        private readonly ILogging _logger;
 
-        public SpecDbOperations(IServiceScopeFactory serviceScopeFactory, SpecDetailsManagement specDetailsManagement, EmailService emailService, Logging logging)
+        public SpecDbOperations(IServiceScopeFactory serviceScopeFactory, SpecDetailsManagement specDetailsManagement, EmailService emailService, ILogging logging)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _specDetailsManagement = specDetailsManagement;
