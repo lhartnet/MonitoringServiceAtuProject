@@ -14,7 +14,7 @@ IHost host = Host.CreateDefaultBuilder(args)
 
         services.Configure<ConfigurableSettings>(context.Configuration.GetSection("Options"));
         services.Configure<EmailProperties.EmailSettings>(context.Configuration.GetSection("EmailSettings"));
-        services.AddSingleton<EmailService>();
+        services.AddSingleton<IEmailService, EmailService>();
         services.AddSingleton<FileDirectorySetup>();
         services.AddSingleton<CsvFileManagement>();
         services.AddSingleton<NewFileManagment>();
