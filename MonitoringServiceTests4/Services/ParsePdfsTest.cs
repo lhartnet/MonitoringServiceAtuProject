@@ -58,26 +58,24 @@ namespace ParsePdfsTest.Services
         private void CreateSamplePdf(string filePath)
         {
 
-            using (var writer = new PdfWriter(filePath))
-            using (var pdf = new PdfDocument(writer))
-            using (var document = new Document(pdf))
-            {
+            using var writer = new PdfWriter(filePath);
+            using var pdf = new PdfDocument(writer);
+            using var document = new Document(pdf);
 
-                document.Add(new Paragraph("Title"));
-                document.Add(new Paragraph("Test Title"));
-                document.Add(new Paragraph("Author"));
-                document.Add(new Paragraph("Test Author"));
-                document.Add(new Paragraph("Revision"));
-                document.Add(new Paragraph("TA"));
-                document.Add(new Paragraph("Date"));
-                document.Add(new Paragraph("21/03/2024"));
-                document.Add(new Paragraph("Area"));
-                document.Add(new Paragraph("TestArea"));
-                document.Add(new Paragraph("Purpose"));
-                document.Add(new Paragraph("TestPurpose"));
-                document.Add(new Paragraph("Description"));
-                document.Add(new Paragraph("Test Description"));
-            }
+            document.Add(new Paragraph("Title"));
+            document.Add(new Paragraph("Test Title"));
+            document.Add(new Paragraph("Author"));
+            document.Add(new Paragraph("Test Author"));
+            document.Add(new Paragraph("Revision"));
+            document.Add(new Paragraph("TA"));
+            document.Add(new Paragraph("Date"));
+            document.Add(new Paragraph("21/03/2024"));
+            document.Add(new Paragraph("Area"));
+            document.Add(new Paragraph("TestArea"));
+            document.Add(new Paragraph("Purpose"));
+            document.Add(new Paragraph("TestPurpose"));
+            document.Add(new Paragraph("Description"));
+            document.Add(new Paragraph("Test Description"));
         }
 
         /// <summary>

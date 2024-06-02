@@ -33,19 +33,17 @@ namespace MonitoringService.Services
             try
             {
                 var fileName = Path.GetFileName(pdfPath);
-                using (PdfReader reader = new PdfReader(pdfPath))
-                using (PdfDocument pdfDoc = new PdfDocument(reader))
+                using var reader = new PdfReader(pdfPath);
+                using var pdfDoc = new PdfDocument(reader);
+                StringBuilder textBuilder = new ();
+                for (var i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
                 {
-                    StringBuilder textBuilder = new StringBuilder();
-                    for (int i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
-                    {
-                        textBuilder.Append(PdfTextExtractor.GetTextFromPage(pdfDoc.GetPage(i)));
-                    }
-                    string pdfText = textBuilder.ToString();
-                    var pdfData = ParseSpecData(pdfText, fileName, folder);
-                    _logger.LogSpecData(pdfData);
-                    return pdfData;
+                    textBuilder.Append(PdfTextExtractor.GetTextFromPage(pdfDoc.GetPage(i)));
                 }
+                var pdfText = textBuilder.ToString();
+                var pdfData = ParseSpecData(pdfText, fileName, folder);
+                _logger.LogSpecData(pdfData);
+                return pdfData;
             }
             catch (Exception ex)
             {
@@ -69,8 +67,8 @@ namespace MonitoringService.Services
             var data = new SpecDetails();
             var lines = pdfText.Split('\n');
 
-            string currentSection = null;
-            StringBuilder sectionContent = new StringBuilder();
+            string? currentSection = null;
+            var sectionContent = new StringBuilder();
 
             foreach (var line in lines)
             {
@@ -97,7 +95,7 @@ namespace MonitoringService.Services
                         {
                             if (sectionContent.Length > 0)
                             {
-                                sectionContent.Append(" ");
+                                sectionContent.Append(' ');
                             }
                             sectionContent.Append(trimmedLine);
                         }
