@@ -40,3 +40,18 @@ jobs:
       - name: Print test success message
         run: echo "If you make it this far all of your tests are passing "
 
+      - name: Publish
+        run: dotnet publish -c Release -o out
+  
+      - name: Decode publish profile
+        env:
+          PUBLISH_PROFILE: ${{ secrets.PUBLISH_PROFILE }}
+        run: |
+          echo $PUBLISH_PROFILE | base64 --decode > /tmp/publish-profile.pubxml
+  
+      - name: Save build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: published-artifacts
+          path: out/
+
