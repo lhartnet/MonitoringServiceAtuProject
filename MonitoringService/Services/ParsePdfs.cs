@@ -42,6 +42,7 @@ namespace MonitoringService.Services
                 }
                 var pdfText = textBuilder.ToString();
                 var pdfData = ParseSpecData(pdfText, fileName, folder);
+                _logger.LogInformation("----- Displaying spec information: -----\n");
                 _logger.LogSpecData(pdfData);
                 return pdfData;
             }
