@@ -6,10 +6,7 @@ using MonitoringService.Interfaces;
 
 namespace MonitoringService
 {
-    /// <summary>
-    /// Main functional class of this montioring service
-    /// </summary>
-    public class Worker : BackgroundService
+   public class Worker : BackgroundService
     {
         // Load in all required services, files, parameters
         private readonly ILogger<Worker> _logger;
@@ -26,8 +23,8 @@ namespace MonitoringService
         private readonly int _delayBetweenRuns;
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
-        private readonly List<string> _previousOngoingFiles;
-        private readonly List<string> _previousApprovedFiles;
+        private List<string> _previousOngoingFiles;
+        private List<string> _previousApprovedFiles;
 
         // Worker class constructor
         public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, ISpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, IEmailService emailService, IServiceScopeFactory serviceScopeFactory)
@@ -44,12 +41,19 @@ namespace MonitoringService
             _specDetailsManagement = specDetailsManagement;
             _specDbOperations = specDbOperations;
             _csvFileManagement = csvFileManagement;
-            _previousOngoingFiles = _specDbOperations.GetFileNamesFromDatabase("Ongoing");
-            _previousApprovedFiles = _specDbOperations.GetFileNamesFromDatabase("Approved");
             _emailService = emailService;
+
             _fileDirectorySetup.EnsureDirectoriesExist(_ongoingFolderPath, _approvedFolderPath, _approvedCsvPath);
+
+            // Initialize file lists
+            InitializeFileLists();
         }
 
+        private void InitializeFileLists()
+        {
+            _previousOngoingFiles = _specDbOperations.GetFileNamesFromDatabase("Ongoing");
+            _previousApprovedFiles = _specDbOperations.GetFileNamesFromDatabase("Approved");
+        }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -57,26 +61,25 @@ namespace MonitoringService
             {
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
-
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
-                    // Get list of new files in ongoing folder
+                    // Get list of new files in ongoing folder by comparing existing files to the ones currently in the folder
                     _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
                     var ongoingFiles = _newFileManagment.CheckFolderContents(_ongoingFolderPath);
-                    _logger.LogInformation("Found " + ongoingFiles.Length + "file in ongoing folder\n");
+                    _logger.LogInformation("Found {count} file(s) in ongoing folder", ongoingFiles.Length);
 
                     _logger.LogInformation("Comparing ongoing files...");
                     string[] newOngoingFiles = _newFileManagment.CompareFolderContents(ongoingFiles, _previousOngoingFiles);
-                    _logger.LogInformation(newOngoingFiles.Length + " new file(s) found in ongoing folder\n");
+                    _logger.LogInformation("{count} new file(s) found in ongoing folder", newOngoingFiles.Length);
 
-                    // Get list of new files in approved folder
+                    // Get list of new files in approved folder by comparing existing files to the ones currently in the folder
                     _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
                     var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
-                    _logger.LogInformation("Found " + approvedFiles.Length + " file(s) in approved folder\n");
+                    _logger.LogInformation("Found {count} file(s) in approved folder", approvedFiles.Length);
 
                     _logger.LogInformation("Comparing approved files...");
                     string[] newApprovedFiles = _newFileManagment.CompareFolderContents(approvedFiles, _previousApprovedFiles);
-                    _logger.LogInformation(newApprovedFiles.Length + " new file(s) found in approved folder\n");
+                    _logger.LogInformation("{count} new file(s) found in approved folder", newApprovedFiles.Length);
 
                     List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
@@ -84,111 +87,75 @@ namespace MonitoringService
                     List<SpecDetails> emptyListOngoingFiles = new List<SpecDetails>();
                     List<SpecDetails> emptyListApprovedFiles = new List<SpecDetails>();
 
-                    // ONGOING FILES: If the pdf has all the information needed for the specDetails object save it to the database and e-mail recipients about them.
-                    // If there is information missing from the pdf for the specDetails object do not save this to the database and email admin about the issue.
-                    if (newOngoingFiles.Length > 0)
-                    {
-                        foreach (var file in newOngoingFiles)
-                        {
-                            if (Path.GetExtension(file) == ".pdf")
-                            {
-                                var fileData = _parsePdfs.ExtractSpecData(file, "Ongoing");
-                                bool noEmptyFields = _specDetailsManagement.AllSpecFieldsEntered(fileData);
-                                if (noEmptyFields)
-                                {
-                                    listOngoingFiles.Add(fileData);
-                                }
-                                else
-                                {
-                                    emptyListOngoingFiles.Add(fileData);
-                                }
+                    // Process new files
+                    ProcessNewFiles(newOngoingFiles, listOngoingFiles, emptyListOngoingFiles, "Ongoing");
+                    ProcessNewFiles(newApprovedFiles, listApprovedFiles, emptyListApprovedFiles, "Approved");
 
-                            }
-                        }
+                    // Save processed files
+                    SaveAndNotify(listOngoingFiles, "Ongoing");
+                    SaveAndNotify(listApprovedFiles, "Approved");
 
-                        if (listOngoingFiles.Count > 0)
-                        {
-                            _logger.LogInformation($"{listOngoingFiles.Count} new ongoing files. Preparing to notify and save to database.\n");
-                            _emailService.SendNewFilesEmail(listOngoingFiles,"Ongoing");
-                            _specDbOperations.SaveToDatabase(listOngoingFiles);
-                        }
-
-                        if (emptyListOngoingFiles.Count > 0)
-                        {
-                            _logger.LogWarning($"{emptyListOngoingFiles} new files in ongoing folder have missing data. Please review.\n");
-                            List<string> fileNames = new List<string>();
-                            foreach (SpecDetails spec in emptyListOngoingFiles)
-                            {
-                                fileNames.Add(spec.FileName);
-                            }
-
-                            var fileNameString = string.Join(",", fileNames);
-
-                            var issue =
-                                $"Please review the following specs in the ongoing folder:\n{fileNameString}\n\nSome data is missing.";
-
-                            _emailService.SendAdminErrorMail(issue, "Ongoing");
-                        }
-
-                    }
-
-                    // APPROVED FILES: If the pdf has all the information needed for the specDetails object save it to the database and e-mail recipients about them.
-                    // If there is information missing from the pdf for the specDetails object do not save this to the database and email admin about the issue.
-                    if (newApprovedFiles.Length > 0)
-                    {
-                        foreach (var file in newApprovedFiles)
-                        {
-                            if (Path.GetExtension(file) == ".pdf")
-                            {
-                                var fileData = _parsePdfs.ExtractSpecData(file, "Approved");
-                                bool noEmptyFields = _specDetailsManagement.AllSpecFieldsEntered(fileData);
-                                if (noEmptyFields)
-                                {
-                                    listApprovedFiles.Add(fileData);
-                                }
-                                else
-                                {
-                                    emptyListApprovedFiles.Add(fileData);
-                                }
-
-                            }
-                        }
-
-                        if (listApprovedFiles.Count > 0)
-                        {
-                            _logger.LogInformation($"{listApprovedFiles.Count} new approved files. Preparing to notify and save to database.\n");
-                            _emailService.SendNewFilesEmail(listApprovedFiles, "Approved");
-                            _specDbOperations.SaveToDatabase(listApprovedFiles);
-                            _csvFileManagement.CreateAndSaveCsvFile(listApprovedFiles);
-                        }
-
-                        if (emptyListApprovedFiles.Count > 0)
-                        {
-                            _logger.LogWarning($"{emptyListApprovedFiles} new files in approved folder have missing data. Please review.\n");
-                            List<string> fileNames = new List<string>();
-                            foreach (SpecDetails spec in emptyListApprovedFiles)
-                            {
-                                fileNames.Add(spec.FileName);
-                            }
-
-                            var fileNameString = string.Join(",", fileNames);
-
-                            var issue =
-                                $"Please review the following specs in the approved folder:\n{fileNameString}\n\nSome data is missing.";
-
-                            _emailService.SendAdminErrorMail(issue, "Approved");
-                        }
-
-                    }
-
+                    // Update previous files lists 
+                    UpdatePreviousFilesLists(listOngoingFiles, listApprovedFiles);
                 }
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
         }
 
+      // Extract and parse the information from the PDFs
+        private void ProcessNewFiles(string[] newFiles, List<SpecDetails> validList, List<SpecDetails> emptyList, string folderType)
+        {
+            if (newFiles.Length > 0)
+            {
+                foreach (var file in newFiles)
+                {
+                    if (Path.GetExtension(file) == ".pdf")
+                    {
+                        var fileData = _parsePdfs.ExtractSpecData(file, folderType);
+                        bool noEmptyFields = _specDetailsManagement.AllSpecFieldsEntered(fileData);
+                        if (noEmptyFields)
+                        {
+                            validList.Add(fileData);
+                        }
+                        else
+                        {
+                            emptyList.Add(fileData);
+                        }
+                    }
+                }
 
+                if (emptyList.Count > 0)
+                {
+                    _logger.LogWarning("{count} new files in {folderType} folder have missing data. Please review.", emptyList.Count, folderType);
+                    List<string> fileNames = emptyList.Select(spec => spec.FileName).ToList();
+                    var fileNameString = string.Join(",", fileNames);
+                    var issue = $"Please review the following specs in the {folderType} folder:\n{fileNameString}\n\nSome data is missing.";
+                    _emailService.SendAdminErrorMail(issue, folderType);
+                }
+            }
+        }
 
+        private void SaveAndNotify(List<SpecDetails> fileList, string folderType)
+        {
+            if (fileList.Count > 0)
+            {
+                _logger.LogInformation("{count} new {folderType} files. Preparing to notify and save to database.", fileList.Count, folderType);
+                _emailService.SendNewFilesEmail(fileList, folderType);
+                _specDbOperations.SaveToDatabase(fileList);
+                if (folderType == "Approved")
+                {
+                    _csvFileManagement.CreateAndSaveCsvFile(fileList);
+                }
+            }
+        }
+
+        private void UpdatePreviousFilesLists(List<SpecDetails> ongoingFiles, List<SpecDetails> approvedFiles)
+        {
+            _previousOngoingFiles.AddRange(ongoingFiles.Select(f => f.FileName));
+            _previousApprovedFiles.AddRange(approvedFiles.Select(f => f.FileName));
+        }
     }
 }
+
 
 
