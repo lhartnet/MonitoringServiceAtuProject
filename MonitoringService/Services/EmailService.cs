@@ -64,7 +64,7 @@ namespace MonitoringService.Services
                     mailMessage.To.Add(emailAddress);
 
                     smtpClient.Send(mailMessage);
-                    _logger.LogInformation($"Email sent to {emailAddress}: {mailMessage.Subject}");
+                    _logger.LogInformation($"\nEmail sent to {emailAddress}: {mailMessage.Subject}");
                 }
 
 

@@ -40,7 +40,7 @@ namespace MonitoringService.Services
             }
 
             File.WriteAllText(csvFilePath, csvContent.ToString());
-            _logger.LogInformation($"CSV file created at {csvFilePath}");
+            _logger.LogInformation($"\nCSV file created at {csvFilePath}");
         }
     }
 }

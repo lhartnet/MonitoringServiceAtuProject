@@ -72,7 +72,7 @@ namespace MonitoringService.Services
             }
             else
             {
-                _logger.LogInformation("No new files added since last run.");
+                _logger.LogInformation("\n\nNo new files added since last run.\n");
                 return new string[0];
             }
         }

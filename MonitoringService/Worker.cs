@@ -61,23 +61,23 @@ namespace MonitoringService
             {
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    _logger.LogInformation("\n\nWorker running at: {time}", DateTimeOffset.Now);
 
                     // Get list of new files in ongoing folder by comparing existing files to the ones currently in the folder
-                    _logger.LogInformation("Checking for files in ongoing folder: {folder}", _ongoingFolderPath);
+                    _logger.LogInformation("\nChecking for files in ongoing folder: {folder}", _ongoingFolderPath);
                     var ongoingFiles = _newFileManagment.CheckFolderContents(_ongoingFolderPath);
                     _logger.LogInformation("Found {count} file(s) in ongoing folder", ongoingFiles.Length);
 
-                    _logger.LogInformation("Comparing ongoing files...");
+                    _logger.LogInformation("\nComparing ongoing files...");
                     string[] newOngoingFiles = _newFileManagment.CompareFolderContents(ongoingFiles, _previousOngoingFiles);
                     _logger.LogInformation("{count} new file(s) found in ongoing folder", newOngoingFiles.Length);
 
                     // Get list of new files in approved folder by comparing existing files to the ones currently in the folder
-                    _logger.LogInformation("Checking for files in approved folder: {folder}", _approvedFolderPath);
+                    _logger.LogInformation("\nChecking for files in approved folder: {folder}", _approvedFolderPath);
                     var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
                     _logger.LogInformation("Found {count} file(s) in approved folder", approvedFiles.Length);
 
-                    _logger.LogInformation("Comparing approved files...");
+                    _logger.LogInformation("\nComparing approved files...");
                     string[] newApprovedFiles = _newFileManagment.CompareFolderContents(approvedFiles, _previousApprovedFiles);
                     _logger.LogInformation("{count} new file(s) found in approved folder", newApprovedFiles.Length);
 
@@ -98,6 +98,7 @@ namespace MonitoringService
                     // Update previous files lists 
                     UpdatePreviousFilesLists(listOngoingFiles, listApprovedFiles);
                 }
+                _logger.LogInformation("\n\n\n\n##################################\n RUN HAS COMPLETE... NEXT RUN PENDING....\n##################################\n\n\n");
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
         }
