@@ -1,3 +1,4 @@
+using log4net;
 using Microsoft.Extensions.Options;
 using MonitoringService.Persistence;
 using MonitoringService.Services;
@@ -6,10 +7,9 @@ using MonitoringService.Interfaces;
 
 namespace MonitoringService
 {
-   public class Worker : BackgroundService
+    public class Worker : BackgroundService
     {
-        // Load in all required services, files, parameters
-        private readonly ILogger<Worker> _logger;
+        private static readonly ILog log = LogManager.GetLogger(typeof(Worker));
         private readonly FileDirectorySetup _fileDirectorySetup;
         private readonly NewFileManagment _newFileManagment;
         private readonly ParsePdfs _parsePdfs;
@@ -27,9 +27,8 @@ namespace MonitoringService
         private List<string> _previousApprovedFiles;
 
         // Worker class constructor
-        public Worker(ILogger<Worker> logger, IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, ISpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, IEmailService emailService, IServiceScopeFactory serviceScopeFactory)
+        public Worker(IOptions<ConfigurableSettings> folderSettings, FileDirectorySetup fileDirectorySetup, NewFileManagment newFileManagment, ParsePdfs parsePdfs, CsvFileManagement csvFileManagement, ISpecDetailsManagement specDetailsManagement, SpecDbOperations specDbOperations, IEmailService emailService, IServiceScopeFactory serviceScopeFactory)
         {
-            _logger = logger;
             _ongoingFolderPath = folderSettings.Value.Ongoing;
             _approvedFolderPath = folderSettings.Value.Approved;
             _approvedCsvPath = folderSettings.Value.ApprovedCsv;
@@ -61,31 +60,34 @@ namespace MonitoringService
             {
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    _logger.LogInformation("\n\nWorker running at: {time}", DateTimeOffset.Now);
+                    log.Info("\n\nWorker running at: " + DateTimeOffset.Now);
 
                     // Get list of new files in ongoing folder by comparing existing files to the ones currently in the folder
-                    _logger.LogInformation("\nChecking for files in ongoing folder: {folder}", _ongoingFolderPath);
+                    log.Info("");
+                    log.Info("Checking for files in ongoing folder: " + _ongoingFolderPath);
                     var ongoingFiles = _newFileManagment.CheckFolderContents(_ongoingFolderPath);
-                    _logger.LogInformation("Found {count} file(s) in ongoing folder", ongoingFiles.Length);
+                    log.Info("Found " + ongoingFiles.Length + " file(s) in ongoing folder\n");
 
-                    _logger.LogInformation("\nComparing ongoing files...");
+                    log.Info("");
+                    log.Info("Comparing ongoing files...");
                     string[] newOngoingFiles = _newFileManagment.CompareFolderContents(ongoingFiles, _previousOngoingFiles);
-                    _logger.LogInformation("{count} new file(s) found in ongoing folder", newOngoingFiles.Length);
+                    log.Info(newOngoingFiles.Length + " new file(s) found in ongoing folder\n");
 
                     // Get list of new files in approved folder by comparing existing files to the ones currently in the folder
-                    _logger.LogInformation("\nChecking for files in approved folder: {folder}", _approvedFolderPath);
+                    log.Info("Checking for files in approved folder: " + _approvedFolderPath);
                     var approvedFiles = _newFileManagment.CheckFolderContents(_approvedFolderPath);
-                    _logger.LogInformation("Found {count} file(s) in approved folder", approvedFiles.Length);
+                    log.Info("Found " + approvedFiles.Length + " file(s) in approved folder\n");
 
-                    _logger.LogInformation("\nComparing approved files...");
+                    log.Info("");
+                    log.Info("Comparing approved files...");
                     string[] newApprovedFiles = _newFileManagment.CompareFolderContents(approvedFiles, _previousApprovedFiles);
-                    _logger.LogInformation("{count} new file(s) found in approved folder", newApprovedFiles.Length);
+                    log.Info(newApprovedFiles.Length + " new file(s) found in approved folder\n");
 
-                    List<SpecDetails> listOngoingFiles = new List<SpecDetails>();
-                    List<SpecDetails> listApprovedFiles = new List<SpecDetails>();
+                    List<SpecDetails> listOngoingFiles = new ();
+                    List<SpecDetails> listApprovedFiles = new ();
 
-                    List<SpecDetails> emptyListOngoingFiles = new List<SpecDetails>();
-                    List<SpecDetails> emptyListApprovedFiles = new List<SpecDetails>();
+                    List<SpecDetails> emptyListOngoingFiles = new ();
+                    List<SpecDetails> emptyListApprovedFiles = new ();
 
                     // Process new files
                     ProcessNewFiles(newOngoingFiles, listOngoingFiles, emptyListOngoingFiles, "Ongoing");
@@ -98,12 +100,12 @@ namespace MonitoringService
                     // Update previous files lists 
                     UpdatePreviousFilesLists(listOngoingFiles, listApprovedFiles);
                 }
-                _logger.LogInformation("\n\n\n\n##################################\n RUN HAS COMPLETE... NEXT RUN PENDING....\n##################################\n\n\n");
+                log.Info("\n\n\n\n##################################\n RUN HAS COMPLETE... NEXT RUN PENDING....\n##################################\n\n\n");
                 await Task.Delay(_delayBetweenRuns, stoppingToken);
             }
         }
 
-      // Extract and parse the information from the PDFs
+        // Extract and parse the information from the PDFs
         private void ProcessNewFiles(string[] newFiles, List<SpecDetails> validList, List<SpecDetails> emptyList, string folderType)
         {
             if (newFiles.Length > 0)
@@ -127,7 +129,7 @@ namespace MonitoringService
 
                 if (emptyList.Count > 0)
                 {
-                    _logger.LogWarning("{count} new files in {folderType} folder have missing data. Please review.", emptyList.Count, folderType);
+                    log.Warn(emptyList.Count + " new files in " + folderType + " folder have missing data. Please review.");
                     List<string> fileNames = emptyList.Select(spec => spec.FileName).ToList();
                     var fileNameString = string.Join(",", fileNames);
                     var issue = $"Please review the following specs in the {folderType} folder:\n{fileNameString}\n\nSome data is missing.";
@@ -140,7 +142,7 @@ namespace MonitoringService
         {
             if (fileList.Count > 0)
             {
-                _logger.LogInformation("{count} new {folderType} files. Preparing to notify and save to database.", fileList.Count, folderType);
+                log.Info(fileList.Count + " new " + folderType + " files. Preparing to notify and save to database.");
                 _emailService.SendNewFilesEmail(fileList, folderType);
                 _specDbOperations.SaveToDatabase(fileList);
                 if (folderType == "Approved")
@@ -157,6 +159,3 @@ namespace MonitoringService
         }
     }
 }
-
-
-

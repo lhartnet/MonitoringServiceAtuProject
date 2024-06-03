@@ -1,8 +1,11 @@
-﻿using iText.Kernel.Pdf.Canvas.Parser;
-using iText.Kernel.Pdf;
+﻿using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Canvas.Parser;
 using MonitoringService.Domain.Models;
-using System.Text;
 using MonitoringService.Interfaces;
+using System;
+using System.IO;
+using System.Text;
+using log4net;
 
 namespace MonitoringService.Services
 {
@@ -11,13 +14,12 @@ namespace MonitoringService.Services
     /// </summary>
     public class ParsePdfs
     {
-        private readonly ILogging _logger;
+        private static readonly ILog log = LogManager.GetLogger(typeof(ParsePdfs));
         private readonly IEmailService _emailService;
         private readonly ISpecDetailsManagement _specDetailsManagement;
 
-        public ParsePdfs(ILogging logging, IEmailService emailService, ISpecDetailsManagement specDetailsManagement)
+        public ParsePdfs(IEmailService emailService, ISpecDetailsManagement specDetailsManagement)
         {
-            _logger = logging;
             _emailService = emailService;
             _specDetailsManagement = specDetailsManagement;
         }
@@ -35,20 +37,20 @@ namespace MonitoringService.Services
                 var fileName = Path.GetFileName(pdfPath);
                 using var reader = new PdfReader(pdfPath);
                 using var pdfDoc = new PdfDocument(reader);
-                StringBuilder textBuilder = new ();
+                StringBuilder textBuilder = new();
                 for (var i = 1; i <= pdfDoc.GetNumberOfPages(); i++)
                 {
                     textBuilder.Append(PdfTextExtractor.GetTextFromPage(pdfDoc.GetPage(i)));
                 }
                 var pdfText = textBuilder.ToString();
                 var pdfData = ParseSpecData(pdfText, fileName, folder);
-                _logger.LogInformation("----- Displaying spec information: -----\n");
-                _logger.LogSpecData(pdfData);
+                log.Info("----- Displaying spec information: -----\n");
+                LogSpecData(pdfData);
                 return pdfData;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error reading PDF file {pdfPath}: {ex.Message}");
+                log.Error($"Error reading PDF file {pdfPath}: {ex.Message}");
                 var issue = $"There was an issue extracting data from {pdfPath}. The exception message is as follows:\n{ex.Message} Please review.";
                 _emailService.SendAdminErrorMail(issue, folder);
                 return null;
@@ -113,6 +115,23 @@ namespace MonitoringService.Services
             _specDetailsManagement.SetSpecProperties(data, "Folder", folder);
 
             return data;
+        }
+
+        /// <summary>
+        /// Logs the spec data details.
+        /// </summary>
+        /// <param name="specData">The spec data to log.</param>
+        private void LogSpecData(SpecDetails specData)
+        {
+            log.Info($"Title: {specData.Title}");
+            log.Info($"Author: {specData.Author}");
+            log.Info($"Revision: {specData.Revision}");
+            log.Info($"Date: {specData.Date}");
+            log.Info($"Area: {specData.Area}");
+            log.Info($"Purpose: {specData.Purpose}");
+            log.Info($"Description: {specData.Description}");
+            log.Info($"FileName: {specData.FileName}");
+            log.Info($"Folder: {specData.Folder}");
         }
     }
 }

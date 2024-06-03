@@ -1,4 +1,9 @@
-﻿using MonitoringService.Interfaces;
+﻿using log4net;
+using MonitoringService.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace MonitoringService.Services
 {
@@ -7,12 +12,11 @@ namespace MonitoringService.Services
     /// </summary>
     public class NewFileManagment
     {
-        private readonly ILogger<NewFileManagment> _logger;
+        private static readonly ILog log = LogManager.GetLogger(typeof(NewFileManagment));
         private readonly IEmailService _emailService;
 
-        public NewFileManagment(ILogger<NewFileManagment> logger, IEmailService emailService)
+        public NewFileManagment(IEmailService emailService)
         {
-            _logger = logger;
             _emailService = emailService;
         }
 
@@ -25,17 +29,17 @@ namespace MonitoringService.Services
         {
             try
             {
-                string[] files = Directory.GetFiles(filePath);
-                _logger.LogInformation($"Retrieved files in folder {filePath}:");
+                var files = Directory.GetFiles(filePath);
+                log.Info($"Retrieved files in folder {filePath}:");
                 return files.ToArray();
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error reading folder contents for {filePath}: {ex.Message}");
+                log.Error($"Error reading folder contents for {filePath}: {ex.Message}");
                 var issue =
                     $"There was an issue attempting to read the folder contents for {filePath} by the monitoring service. Here is the exception message:\n{ex.Message}\n\nPlease review.";
-                _emailService. SendAdminErrorMail(issue, filePath);
-                return new string[0];
+                _emailService.SendAdminErrorMail(issue, filePath);
+                return Array.Empty<string>();
             }
         }
 
@@ -48,13 +52,13 @@ namespace MonitoringService.Services
         /// <returns>The list of files in that location as an array of strings</returns>
         public string[] CompareFolderContents(string[] currentFiles, List<string> existingFiles)
         {
-            List<string> newFiles = new List<string>();
+            List<string> newFiles = new ();
 
             // Compare just the filename in the folder to the filename in the database and store the full file path of files that are NOT in the database.
             // We need the full filepath for a method later on.
-            foreach (string currentFile in currentFiles)
+            foreach (var currentFile in currentFiles)
             {
-                string fileName = Path.GetFileName(currentFile);
+                var fileName = Path.GetFileName(currentFile);
                 if (!existingFiles.Contains(fileName))
                 {
                     newFiles.Add(currentFile);
@@ -63,19 +67,18 @@ namespace MonitoringService.Services
 
             if (newFiles.Any())
             {
-                _logger.LogInformation("New files added since last run:");
+                log.Info("New files added since last run:");
                 foreach (string newFile in newFiles)
                 {
-                    _logger.LogInformation("File added: {file}", newFile);
+                    log.Info($"File added: {newFile}");
                 }
                 return newFiles.ToArray();
             }
             else
             {
-                _logger.LogInformation("\n\nNo new files added since last run.\n");
-                return new string[0];
+                log.Info("\n\nNo new files added since last run.\n");
+                return Array.Empty<string>();
             }
         }
-
     }
 }

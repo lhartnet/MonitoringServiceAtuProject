@@ -1,9 +1,13 @@
-﻿using Microsoft.Extensions.Options;
+﻿using log4net;
+using Microsoft.Extensions.Options;
 using System.Net.Mail;
 using System.Net;
 using System.Text;
 using MonitoringService.Domain.Models;
 using MonitoringService.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MonitoringService.Services
 {
@@ -12,15 +16,13 @@ namespace MonitoringService.Services
     /// </summary>
     public class EmailService : IEmailService
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(EmailService));
         private readonly EmailProperties.EmailSettings _emailSettings;
-        private readonly ILogger<Worker> _logger;
 
-        public EmailService(IOptions<EmailProperties.EmailSettings> emailSettings, ILogger<Worker> logger)
+        public EmailService(IOptions<EmailProperties.EmailSettings> emailSettings)
         {
             _emailSettings = emailSettings.Value;
-            _logger = logger;
         }
-
 
         /// <summary>
         /// Send e-mail to users listed in "RecipientEmail" or "AdminEmail" setting in appsettings.json.
@@ -29,7 +31,7 @@ namespace MonitoringService.Services
         /// </summary>
         /// <param name="subject">The text to be set as the subject of the e-mail.</param>
         /// <param name="body">The text to be set as the body of the email.</param>
-        /// <param name="emailTo">A string to identify if this mail should be sent to admin or regular recipents</param>
+        /// <param name="emailTo">A string to identify if this mail should be sent to admin or regular recipients</param>
         public void SendEmail(string subject, string body, string emailTo)
         {
             try
@@ -49,7 +51,7 @@ namespace MonitoringService.Services
                     IsBodyHtml = false,
                 };
 
-                List<string> emailAddresses = new List<string>();
+                List<string> emailAddresses = new ();
                 if (emailTo == "Admin")
                 {
                     emailAddresses = _emailSettings.AdminEmail.Split(',').ToList();
@@ -59,25 +61,22 @@ namespace MonitoringService.Services
                     emailAddresses = _emailSettings.RecipientEmail.Split(',').ToList();
                 }
 
-                foreach (string emailAddress in emailAddresses)
+                foreach (var emailAddress in emailAddresses)
                 {
                     mailMessage.To.Add(emailAddress);
 
                     smtpClient.Send(mailMessage);
-                    _logger.LogInformation($"\nEmail sent to {emailAddress}: {mailMessage.Subject}");
+                    log.Info($"\nEmail sent to {emailAddress}: {mailMessage.Subject}");
                 }
-
-
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error sending mail: {ex.Message}");
+                log.Error($"Error sending mail: {ex.Message}");
                 var errorSubject = "Attn: Error sending mail for Spec Monitoring Service";
-                var errorBody = $"Hi,\nThis is a notification to inform you that a mail with the following details failed to send by the monitoring service.\n\nSubject: {subject}\n\nBody: {body}\\n\\nHere is the error message: {{ex.Message}}\nThanks";
+                var errorBody = $"Hi,\nThis is a notification to inform you that a mail with the following details failed to send by the monitoring service.\n\nSubject: {subject}\n\nBody: {body}\n\nHere is the error message: {ex.Message}\nThanks";
                 SendEmail(errorSubject, errorBody, "Admin");
             }
         }
-
 
         /// <summary>
         /// Custom e-mail to let recipients know that new files have been found in the ongoing and/or approved folder

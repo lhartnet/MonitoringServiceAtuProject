@@ -1,6 +1,6 @@
-﻿using MonitoringService.Domain.Models;
+﻿using log4net;
+using MonitoringService.Domain.Models;
 using MonitoringService.Interfaces;
-using MonitoringService.Services;
 
 namespace MonitoringService.Persistence
 {
@@ -9,17 +9,16 @@ namespace MonitoringService.Persistence
     /// </summary>
     public class SpecDbOperations
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(SpecDbOperations));
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ISpecDetailsManagement _specDetailsManagement;
         private readonly IEmailService _emailService;
-        private readonly ILogging _logger;
 
-        public SpecDbOperations(IServiceScopeFactory serviceScopeFactory, ISpecDetailsManagement specDetailsManagement, IEmailService emailService, ILogging logging)
+        public SpecDbOperations(IServiceScopeFactory serviceScopeFactory, ISpecDetailsManagement specDetailsManagement, IEmailService emailService)
         {
             _serviceScopeFactory = serviceScopeFactory;
             _specDetailsManagement = specDetailsManagement;
             _emailService = emailService;
-            _logger = logging;
         }
 
         /// <summary>
@@ -32,7 +31,7 @@ namespace MonitoringService.Persistence
             using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
-            _logger.LogInformation($"Retrieving list of {Folder} file names from the database...\n");
+            log.Info($"Retrieving list of {Folder} file names from the database...\n");
             return dbContext.SpecDetails.Where(s => s.Folder == Folder).Select(s => s.FileName).ToList();
         }
 
@@ -46,7 +45,7 @@ namespace MonitoringService.Persistence
             using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
-            _logger.LogInformation($"Retrieving list of {folder} files from the database...\n");
+            log.Info($"Retrieving list of {folder} files from the database...\n");
             List<SpecDetails> entries = dbContext.SpecDetails.Where(s => s.Folder == folder).ToList();
 
             return entries;
@@ -65,19 +64,18 @@ namespace MonitoringService.Persistence
                 if (_specDetailsManagement.AllSpecFieldsEntered(specRowDocument))
                 {
                     dbContext.SpecDetails.Add(specRowDocument);
-                    _logger.LogInformation($"Added {specRowDocument.FileName} to the database...\n");
+                    log.Info($"Added {specRowDocument.FileName} to the database...\n");
                 }
                 else
                 {
-                    _logger.LogWarning($"Skipping document {specRowDocument.FileName} due to missing information.");
+                    log.Warn($"Skipping document {specRowDocument.FileName} due to missing information.");
                     var issue = $"There was an issue retrieving some information from spec {specRowDocument.FileName} in the {specRowDocument.Folder} folder. Please review to ensure spec is formatted correctly and fully complete and update the file.\n";
                     _emailService.SendAdminErrorMail(issue, specRowDocument.Folder);
                 }
             }
 
-            _logger.LogInformation("Saving to database in progress.....\n");
+            log.Info("Saving to database in progress.....\n");
             dbContext.SaveChanges();
         }
-
     }
 }
