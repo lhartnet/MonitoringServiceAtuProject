@@ -1,6 +1,4 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Microsoft.Extensions.Logging;
 using MonitoringService.Services;
 
 namespace MonitoringServiceTests.Services
@@ -8,14 +6,12 @@ namespace MonitoringServiceTests.Services
     [TestClass]
     public class FileDirectorySetupTests
     {
-        private Mock<ILogger<FileDirectorySetup>> _mockLogger;
         private FileDirectorySetup _fileDirectorySetup;
 
         [TestInitialize]
         public void Setup()
         {
-            _mockLogger = new Mock<ILogger<FileDirectorySetup>>();
-            _fileDirectorySetup = new FileDirectorySetup(_mockLogger.Object);
+            _fileDirectorySetup = new FileDirectorySetup();
         }
 
         [TestMethod]
@@ -34,7 +30,7 @@ namespace MonitoringServiceTests.Services
             // Assert - confirm our file directory exists
             Assert.IsTrue(Directory.Exists(path));
             // Delete our test directory
-            Directory.Delete(path, true); 
+            Directory.Delete(path, true);
         }
 
     }

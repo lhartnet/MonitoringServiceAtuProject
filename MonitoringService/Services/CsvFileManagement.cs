@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.Options;
+﻿using log4net;
+using Microsoft.Extensions.Options;
 using MonitoringService.Domain.Models;
 using System.Globalization;
 using System.Text;
-using MonitoringService.Interfaces;
 
 namespace MonitoringService.Services
 {
@@ -11,12 +11,11 @@ namespace MonitoringService.Services
     /// </summary>
     public class CsvFileManagement
     {
-        private readonly ILogging _logger;
+        private static readonly ILog log = LogManager.GetLogger(typeof(CsvFileManagement));
         private readonly string _approvedCsvPath;
 
-        public CsvFileManagement(ILogging logging, IOptions<ConfigurableSettings> folderSettings)
+        public CsvFileManagement(IOptions<ConfigurableSettings> folderSettings)
         {
-            _logger = logging;
             _approvedCsvPath = folderSettings.Value.ApprovedCsv;
         }
 
@@ -40,7 +39,7 @@ namespace MonitoringService.Services
             }
 
             File.WriteAllText(csvFilePath, csvContent.ToString());
-            _logger.LogInformation($"\nCSV file created at {csvFilePath}");
+            log.Info($"\nCSV file created at {csvFilePath}");
         }
     }
 }

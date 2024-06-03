@@ -1,14 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using MonitoringService.Domain.Models;
 using MonitoringService.Interfaces;
 using MonitoringService.Services;
 using iText.Kernel.Pdf;
 using iText.Layout.Element;
-using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Layout;
-using System.Text;
-using iText.Forms.Form.Element;
 
 
 namespace ParsePdfsTest.Services
@@ -16,7 +12,6 @@ namespace ParsePdfsTest.Services
     [TestClass]
     public class ParsePdfsTests
     {
-        private Mock<ILogging> _mockLogger;
         private Mock<IEmailService> _mockEmailService;
         private Mock<ISpecDetailsManagement> _mockSpecDetailsManagement;
         private ParsePdfs _parsePdfs;
@@ -24,10 +19,9 @@ namespace ParsePdfsTest.Services
         [TestInitialize]
         public void Setup()
         {
-            _mockLogger = new Mock<ILogging>();
             _mockEmailService = new Mock<IEmailService>();
             _mockSpecDetailsManagement = new Mock<ISpecDetailsManagement>();
-            _parsePdfs = new ParsePdfs(_mockLogger.Object, _mockEmailService.Object, _mockSpecDetailsManagement.Object);
+            _parsePdfs = new ParsePdfs(_mockEmailService.Object, _mockSpecDetailsManagement.Object);
         }
 
 

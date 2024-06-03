@@ -18,7 +18,7 @@ namespace MonitoringServiceTests.Services
         {
             _mockLogger = new Mock<ILogger<NewFileManagment>>();
             _mockEmailService = new Mock<IEmailService>();
-            _newFileManagment = new NewFileManagment(_mockLogger.Object, _mockEmailService.Object);
+            _newFileManagment = new NewFileManagment(_mockEmailService.Object);
         }
 
         /// <summary>

@@ -1,18 +1,16 @@
-﻿namespace MonitoringService.Services
+﻿using log4net;
+
+namespace MonitoringService.Services
 {
     /// <summary>
     /// While unlikely to happen, a class to ensure the folders containing files exist. And if they don't, create them.
     /// </summary>
-    /// <param name="issue">Details of the specific problem</param>
-    /// <param name="folder">String to identify if we're dealing with ongoing or approved folder</param>
     public class FileDirectorySetup
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(FileDirectorySetup));
 
-        private readonly ILogger<FileDirectorySetup> _logger;
-
-        public FileDirectorySetup(ILogger<FileDirectorySetup> logger)
+        public FileDirectorySetup()
         {
-            _logger = logger;
         }
 
         /// <summary>
@@ -36,7 +34,7 @@
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
-                _logger.LogInformation($"Created directory at: {path}");
+                log.Info($"Created directory at: {path}");
             }
         }
     }
